@@ -534,31 +534,34 @@ function plotTTest(tObs, df, alt, conf, plotId) {
 
   const xVals = [], yVals = [];
   for (let x = xMin; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2} }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false }];
 
+  // α region: single trace per side, showlegend: true
   if (alt === 'two-sided') {
     const crit = tQuantile(1 - alpha/2, df);
-    shadePolygon(traces, xMin, -crit, pdf, step, 'rgba(220,53,69,0.45)', `α region (|t| > ${crit.toFixed(2)})`);
-    shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (|t| > ${crit.toFixed(2)})`);
+    shadePolygon(traces, xMin, -crit, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
+    shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
   } else if (alt === 'greater') {
     const crit = tQuantile(1 - alpha, df);
-    shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (t > ${crit.toFixed(2)})`);
+    shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
   } else {
     const crit = tQuantile(alpha, df);
-    shadePolygon(traces, xMin, crit, pdf, step, 'rgba(220,53,69,0.45)', `α region (t < ${crit.toFixed(2)})`);
+    shadePolygon(traces, xMin, crit, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
   }
 
+  // p-value region: single trace per side, showlegend: true
   if (alt === 'two-sided') {
     const absT = Math.abs(tObs);
-    shadePolygon(traces, xMin, -absT, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (|t| > ${absT.toFixed(2)})`);
-    shadePolygon(traces, absT, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (|t| > ${absT.toFixed(2)})`);
+    shadePolygon(traces, xMin, -absT, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
+    shadePolygon(traces, absT, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
   } else if (alt === 'greater') {
-    shadePolygon(traces, tObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (t > ${tObs.toFixed(2)})`);
+    shadePolygon(traces, tObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
   } else {
-    shadePolygon(traces, xMin, tObs, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (t < ${tObs.toFixed(2)})`);
+    shadePolygon(traces, xMin, tObs, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
   }
 
-  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false });
+  // re-draw density on top (no legend)
+  traces.push({ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
   const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: tObs, x1: tObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
 
@@ -573,7 +576,8 @@ function plotTTest(tObs, df, alt, conf, plotId) {
       bgcolor: '#0b2b4a', font: {color: '#fff', size: 11}, borderpad: 3
     }],
     legend: { orientation: 'h', y: -0.25 },
-    margin: { t: 30, b: 60 }
+    margin: { t: 30, b: 60 },
+    showlegend: true
   });
 }
 
@@ -700,28 +704,28 @@ function plotZTest(zObs, alt, conf, plotId) {
 
   const xVals = [], yVals = [];
   for (let x = xMin; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2} }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false }];
 
   if (alt === 'two-sided') {
-    shadePolygon(traces, xMin, -zCritTwo, pdf, step, 'rgba(220,53,69,0.45)', `α region (|z| > ${zCritTwo.toFixed(2)})`);
-    shadePolygon(traces, zCritTwo, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (|z| > ${zCritTwo.toFixed(2)})`);
+    shadePolygon(traces, xMin, -zCritTwo, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
+    shadePolygon(traces, zCritTwo, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
   } else if (alt === 'greater') {
-    shadePolygon(traces, zCritOne, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (z > ${zCritOne.toFixed(2)})`);
+    shadePolygon(traces, zCritOne, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
   } else {
-    shadePolygon(traces, xMin, -zCritOne, pdf, step, 'rgba(220,53,69,0.45)', `α region (z < ${(-zCritOne).toFixed(2)})`);
+    shadePolygon(traces, xMin, -zCritOne, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
   }
 
   if (alt === 'two-sided') {
     const absZ = Math.abs(zObs);
-    shadePolygon(traces, xMin, -absZ, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (|z| > ${absZ.toFixed(2)})`);
-    shadePolygon(traces, absZ, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (|z| > ${absZ.toFixed(2)})`);
+    shadePolygon(traces, xMin, -absZ, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
+    shadePolygon(traces, absZ, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
   } else if (alt === 'greater') {
-    shadePolygon(traces, zObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (z > ${zObs.toFixed(2)})`);
+    shadePolygon(traces, zObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
   } else {
-    shadePolygon(traces, xMin, zObs, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (z < ${zObs.toFixed(2)})`);
+    shadePolygon(traces, xMin, zObs, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
   }
 
-  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false });
+  traces.push({ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
   const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: zObs, x1: zObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
 
@@ -736,7 +740,8 @@ function plotZTest(zObs, alt, conf, plotId) {
       bgcolor: '#0b2b4a', font: {color: '#fff', size: 11}, borderpad: 3
     }],
     legend: { orientation: 'h', y: -0.25 },
-    margin: { t: 30, b: 60 }
+    margin: { t: 30, b: 60 },
+    showlegend: true
   });
 }
 
@@ -872,13 +877,13 @@ function plotChiSquare(chi2Obs, df, plotId) {
 
   const xVals = [], yVals = [];
   for (let x = 0.01; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2} }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false }];
 
   const crit = chi2Quantile(1 - alpha, df);
-  shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (χ² > ${crit.toFixed(2)})`);
-  shadePolygon(traces, chi2Obs, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (χ² > ${chi2Obs.toFixed(2)})`);
+  shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
+  shadePolygon(traces, chi2Obs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
 
-  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false });
+  traces.push({ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
   const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: chi2Obs, x1: chi2Obs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
 
@@ -893,7 +898,8 @@ function plotChiSquare(chi2Obs, df, plotId) {
       bgcolor: '#0b2b4a', font: {color: '#fff', size: 11}, borderpad: 3
     }],
     legend: { orientation: 'h', y: -0.25 },
-    margin: { t: 30, b: 60 }
+    margin: { t: 30, b: 60 },
+    showlegend: true
   });
 }
 
@@ -997,13 +1003,13 @@ function plotFTest(fObs, df1, df2, plotId) {
 
   const xVals = [], yVals = [];
   for (let x = 0.01; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2} }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false }];
 
   const crit = fQuantile(1 - alpha, df1, df2);
-  shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (F > ${crit.toFixed(2)})`);
-  shadePolygon(traces, fObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (F > ${fObs.toFixed(2)})`);
+  shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
+  shadePolygon(traces, fObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
 
-  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false });
+  traces.push({ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
   const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: fObs, x1: fObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
 
@@ -1018,7 +1024,8 @@ function plotFTest(fObs, df1, df2, plotId) {
       bgcolor: '#0b2b4a', font: {color: '#fff', size: 11}, borderpad: 3
     }],
     legend: { orientation: 'h', y: -0.25 },
-    margin: { t: 30, b: 60 }
+    margin: { t: 30, b: 60 },
+    showlegend: true
   });
 }
 
