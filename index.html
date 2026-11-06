@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive statistics calculator · t, proportions, chi-square, ANOVA, regression</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.1.min.js" charset="utf-8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #f4f7fb; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    .app { max-width: 1350px; width: 100%; background: white; border-radius: 32px; box-shadow: 0 15px 35px rgba(0,20,40,0.12); padding: 28px 30px; }
+    h1 { font-size: 1.9rem; font-weight: 600; color: #0b2b4a; margin-top: 0; margin-bottom: 0.25rem; letter-spacing: -0.02em; }
+    .subhead { color: #3a5e7a; margin-bottom: 1.8rem; border-left: 5px solid #2c7da0; padding-left: 18px; background: #eef5fa; border-radius: 0 12px 12px 0; padding: 12px 18px; font-size: 1rem; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; border-bottom: 1px solid #d9e3ec; padding-bottom: 10px; }
+    .tab-btn { background: none; border: none; font-size: 1rem; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: 500; color: #2e4b66; transition: 0.15s; }
+    .tab-btn:hover { background: #e3eef8; }
+    .tab-btn.active { background: #2c7da0; color: white; box-shadow: 0 5px 12px rgba(44,125,160,0.3); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: #ffffff; border: 1px solid #d9e3ec; border-radius: 24px; padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+    .row { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 20px; }
+    .col { flex: 1 1 280px; }
+    label { font-weight: 600; font-size: 0.9rem; color: #1b3a55; display: block; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 11px 14px; border: 1px solid #cbdae5; border-radius: 14px; font-size: 0.95rem; background: #fbfdff; transition: 0.15s; margin-bottom: 10px; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #2c7da0; border-color: transparent; background: white; }
+    textarea { min-height: 80px; resize: vertical; font-family: 'Courier New', monospace; }
+    button.primary { background: #2c7da0; color: white; border: none; padding: 14px 28px; font-size: 1rem; font-weight: 600; border-radius: 40px; cursor: pointer; box-shadow: 0 8px 16px rgba(44,125,160,0.25); transition: 0.15s; margin-top: 10px; }
+    button.primary:hover { background: #1f5f7e; transform: translateY(-1px); }
+    button.secondary { background: #e3eef8; border: none; padding: 10px 18px; border-radius: 30px; cursor: pointer; font-weight: 500; color: #1b3a55; }
+    .result { background: #f0f7fc; border-radius: 18px; padding: 18px 20px; margin-top: 20px; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; font-family: 'Courier New', monospace; border-left: 6px solid #2c7da0; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .small-note { font-size: 0.8rem; color: #56758f; margin-top: -8px; margin-bottom: 8px; }
+    .csv-upload { border: 2px dashed #b8cfdf; padding: 16px; border-radius: 20px; background: #f9fcff; text-align: center; cursor: pointer; margin-bottom: 16px; }
+    .csv-upload input { display: none; }
+    .csv-upload label { display: inline-block; background: #2c7da0; color: white; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: 500; }
+    .group-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
+    .group-row textarea { flex: 1; min-height: 50px; }
+    .group-row button { background: #ffe0e0; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-weight: bold; color: #b23b3b; }
+    .hypothesis-plot { width: 100%; height: 320px; margin-top: 16px; }
+    .error { color: #b23b3b; background: #ffe6e6; padding: 12px; border-radius: 16px; }
+    .interpretation { background: #e8f4e8; border-left: 6px solid #3c9e5c; padding: 14px 18px; border-radius: 14px; margin-top: 16px; font-size: 0.92rem; line-height: 1.5; }
+    .tab-content { display: flex; flex-wrap: wrap; gap: 28px; }
+    .left-col { flex: 1 1 380px; }
+    .right-col { flex: 1 1 520px; }
+    .plot-container { min-height: 300px; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.9rem; margin: 12px 0; }
+    th { background: #e1eff9; padding: 10px 12px; text-align: center; font-weight: 600; border: 1px solid #c5d9e8; }
+    td { padding: 8px 12px; border: 1px solid #d0dfea; text-align: center; }
+    td.row-total { background: #f0f7fc; font-weight: 600; }
+    th.col-total { background: #d8e9f5; }
+    .grand-total { background: #c5dff0 !important; font-weight: 700; }
+    .table-section { margin-top: 20px; }
+    .table-title { font-weight: 600; color: #1b3a55; margin-bottom: 8px; font-size: 1rem; }
+    .table-wrapper { overflow-x: auto; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>📊 Statistical calculator</h1>
+  <div class="subhead">One‑sample t / CI · Two‑sample Welch t · Proportions · Chi‑square GOF & independence · One‑way ANOVA & homogeneity · Multiple regression (CSV upload)</div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="oneT">1‑sample t / CI</button>
+    <button class="tab-btn" data-tab="twoT">Welch t‑test</button>
+    <button class="tab-btn" data-tab="prop">Proportions (1 or 2)</button>
+    <button class="tab-btn" data-tab="chisq">Chi‑square</button>
+    <button class="tab-btn" data-tab="anova">ANOVA</button>
+    <button class="tab-btn" data-tab="reg">Multiple regression</button>
+  </div>
+
+  <!-- ================= 1-sample t / CI ================= -->
+  <div id="oneT" class="panel active">
+    <div class="card">
+      <h3>One‑sample t‑test or confidence interval</h3>
+      <div class="tab-content">
+        <div class="left-col">
+          <label>Data mode</label>
+          <select id="oneT_mode" onchange="toggleOneTMode()">
+            <option value="summary">Summary statistics</option>
+            <option value="data">Raw data (comma separated)</option>
+          </select>
+          <div id="oneT_summary">
+            <label>Sample mean (x̄)</label> <input id="oneT_mean" value="10.5" type="number" step="any">
+            <label>Sample SD (s)</label> <input id="oneT_sd" value="2.8" type="number" step="any">
+            <label>Sample size (n)</label> <input id="oneT_n" value="25" type="number" step="1" min="2">
+          </div>
+          <div id="oneT_data" style="display:none;">
+            <label>Raw data (comma separated)</label>
+            <textarea id="oneT_raw">10.2, 11.5, 9.8, 12.1, 10.9, 11.8, 9.5, 10.7, 12.3, 10.1</textarea>
+          </div>
+          <label>Null hypothesis mean (μ₀)</label> <input id="oneT_mu0" value="10" type="number" step="any">
+          <label>Confidence level (for CI)</label>
+          <select id="oneT_conf">
+            <option value="0.95">95%</option>
+            <option value="0.90">90%</option>
+            <option value="0.99">99%</option>
+          </select>
+          <label>Alternative hypothesis</label>
+          <select id="oneT_alt">
+            <option value="two-sided">Two-sided (μ ≠ μ₀)</option>
+            <option value="greater">Greater than (μ > μ₀)</option>
+            <option value="less">Less than (μ < μ₀)</option>
+          </select>
+          <button class="primary" onclick="computeOneT()">Compute</button>
+        </div>
+        <div class="right-col">
+          <div id="oneT_result" class="result">Results will appear here.</div>
+          <div id="oneT_plot" class="hypothesis-plot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Welch two-sample t ================= -->
+  <div id="twoT" class="panel">
+    <div class="card">
+      <h3>Welch two‑sample t‑test (unequal variances)</h3>
+      <div class="tab-content">
+        <div class="left-col">
+          <label>Group 1 data</label>
+          <select id="twoT_mode1" onchange="toggleTwoTMode()">
+            <option value="summary">Summary stats</option>
+            <option value="data">Raw data</option>
+          </select>
+          <div id="twoT_sum1">
+            <label>Mean₁</label> <input id="twoT_m1" value="22.3" type="number" step="any">
+            <label>SD₁</label> <input id="twoT_s1" value="3.1" type="number" step="any">
+            <label>n₁</label> <input id="twoT_n1" value="18" type="number" step="1" min="2">
+          </div>
+          <div id="twoT_data1" style="display:none;">
+            <label>Raw group 1 (comma sep.)</label>
+            <textarea id="twoT_raw1">22.5, 23.1, 21.8, 22.9, 24.0, 20.7, 21.9, 23.5, 22.2, 22.8, 21.5, 23.9, 22.0, 21.3, 22.7, 24.1, 21.1, 23.0</textarea>
+          </div>
+          <label>Group 2 data</label>
+          <select id="twoT_mode2" onchange="toggleTwoTMode2()">
+            <option value="summary">Summary stats</option>
+            <option value="data">Raw data</option>
+          </select>
+          <div id="twoT_sum2">
+            <label>Mean₂</label> <input id="twoT_m2" value="19.8" type="number" step="any">
+            <label>SD₂</label> <input id="twoT_s2" value="2.4" type="number" step="any">
+            <label>n₂</label> <input id="twoT_n2" value="21" type="number" step="1" min="2">
+          </div>
+          <div id="twoT_data2" style="display:none;">
+            <label>Raw group 2 (comma sep.)</label>
+            <textarea id="twoT_raw2">19.5, 20.2, 18.9, 19.8, 20.5, 19.0, 20.1, 19.3, 20.8, 18.7, 19.9, 20.3, 19.1, 20.6, 19.6, 20.0, 19.2, 20.4, 18.8, 19.7, 20.7</textarea>
+          </div>
+          <label>Null difference (μ₁ - μ₂)</label> <input id="twoT_mu_diff" value="0" type="number" step="any">
+          <label>Alternative hypothesis</label>
+          <select id="twoT_alt">
+            <option value="two-sided">Two-sided (μ₁ ≠ μ₂)</option>
+            <option value="greater">μ₁ > μ₂</option>
+            <option value="less">μ₁ < μ₂</option>
+          </select>
+          <button class="primary" onclick="computeWelch()">Welch t-test</button>
+        </div>
+        <div class="right-col">
+          <div id="twoT_result" class="result">Results will appear here.</div>
+          <div id="twoT_plot" class="hypothesis-plot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Proportions ================= -->
+  <div id="prop" class="panel">
+    <div class="card">
+      <h3>One‑ or two‑proportion analysis</h3>
+      <div class="tab-content">
+        <div class="left-col">
+          <label>Type</label>
+          <select id="prop_type" onchange="togglePropType()">
+            <option value="one">One proportion (CI + test)</option>
+            <option value="two">Two proportions (CI + test)</option>
+          </select>
+          <div id="prop_one">
+            <label>Successes (x)</label> <input id="prop_x1" value="45" type="number" step="1" min="0">
+            <label>Sample size (n)</label> <input id="prop_n1" value="120" type="number" step="1" min="1">
+            <label>Null proportion (p₀)</label> <input id="prop_p0" value="0.3" type="number" step="any">
+          </div>
+          <div id="prop_two" style="display:none;">
+            <label>Group 1 successes</label> <input id="prop_x1t" value="45" type="number">
+            <label>Group 1 size</label> <input id="prop_n1t" value="120" type="number">
+            <label>Group 2 successes</label> <input id="prop_x2t" value="32" type="number">
+            <label>Group 2 size</label> <input id="prop_n2t" value="110" type="number">
+          </div>
+          <label>Confidence level</label>
+          <select id="prop_conf">
+            <option value="0.95">95%</option>
+            <option value="0.90">90%</option>
+            <option value="0.99">99%</option>
+          </select>
+          <label>Alternative hypothesis (for test)</label>
+          <select id="prop_alt">
+            <option value="two-sided">Two-sided</option>
+            <option value="greater">Greater</option>
+            <option value="less">Less</option>
+          </select>
+          <button class="primary" onclick="computeProp()">Compute</button>
+        </div>
+        <div class="right-col">
+          <div id="prop_result" class="result">Results will appear here.</div>
+          <div id="prop_plot" class="hypothesis-plot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Chi-square ================= -->
+  <div id="chisq" class="panel">
+    <div class="card">
+      <h3>Chi‑square test</h3>
+      <div class="tab-content">
+        <div class="left-col">
+          <label>Test type</label>
+          <select id="chisq_type" onchange="toggleChi()">
+            <option value="gof">Goodness‑of‑fit (one row)</option>
+            <option value="indep">Independence (contingency table)</option>
+          </select>
+          <div id="chisq_gof">
+            <label>Observed counts (comma sep.)</label>
+            <textarea id="chisq_obs">23, 17, 30, 20, 10</textarea>
+            <label>Expected proportions (comma sep., optional)</label>
+            <textarea id="chisq_exp">0.2, 0.2, 0.2, 0.2, 0.2</textarea>
+            <div class="small-note">Leave expected blank for equal proportions.</div>
+          </div>
+          <div id="chisq_indep" style="display:none;">
+            <label>Contingency table (rows = categories, comma or tab separated)</label>
+            <textarea id="chisq_table" rows="4">20, 30, 15
+25, 18, 12
+10, 22, 30</textarea>
+            <div class="small-note">First row is row 1, etc. Columns are categories.</div>
+          </div>
+          <button class="primary" onclick="computeChi()">Compute</button>
+        </div>
+        <div class="right-col">
+          <div id="chisq_result" class="result">Results will appear here.</div>
+          <div id="chisq_tables" class="table-section"></div>
+          <div id="chisq_plot" class="hypothesis-plot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ANOVA ================= -->
+  <div id="anova" class="panel">
+    <div class="card">
+      <h3>One‑way ANOVA & homogeneity (Levene’s test)</h3>
+      <div class="tab-content">
+        <div class="left-col">
+          <label>Data mode</label>
+          <select id="anova_mode" onchange="toggleAnovaMode()">
+            <option value="groups">Groups (comma separated lists)</option>
+            <option value="csv">Upload CSV / paste table</option>
+          </select>
+          <div id="anova_groups">
+            <div id="anova_group_container"></div>
+            <button class="secondary" onclick="addAnovaGroup()" style="margin-top:8px;">+ Add group</button>
+          </div>
+          <div id="anova_csv" style="display:none;">
+            <div class="csv-upload" onclick="document.getElementById('anovaFile').click()">
+              <label>📁 Upload CSV (one column per group, headers optional)</label>
+              <input type="file" id="anovaFile" accept=".csv" onchange="handleAnovaCSV(event)">
+            </div>
+            <label>Or paste CSV data (first row = headers)</label>
+            <textarea id="anova_csv_text" rows="5">GroupA,GroupB,GroupC
+23,19,28
+25,20,30
+21,18,27
+22,21,29
+24,17,31
+26,22,26
+20,19,25</textarea>
+            <button class="secondary" onclick="parseAnovaCSV()">Load pasted CSV</button>
+          </div>
+          <button class="primary" onclick="computeAnova()">ANOVA & Levene</button>
+        </div>
+        <div class="right-col">
+          <div id="anova_result" class="result">Results will appear here.</div>
+          <div id="anova_plot" class="hypothesis-plot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Multiple Regression ================= -->
+  <div id="reg" class="panel">
+    <div class="card">
+      <h3>Multiple linear regression (CSV upload or paste)</h3>
+      <div class="tab-content">
+        <div class="left-col">
+          <div class="csv-upload" onclick="document.getElementById('regFile').click()">
+            <label>📁 Upload CSV (first row = column names)</label>
+            <input type="file" id="regFile" accept=".csv" onchange="handleRegCSV(event)">
+          </div>
+          <label>Or paste CSV (first row = headers)</label>
+          <textarea id="reg_csv_text" rows="5">y,x1,x2
+12.3,5,2
+15.1,7,3
+10.8,4,1
+18.2,9,4
+20.5,10,5
+16.7,8,3
+13.4,6,2
+22.1,12,6</textarea>
+          <button class="secondary" onclick="parseRegCSV()">Load pasted CSV</button>
+          <div style="margin-top:16px;">
+            <label>Select response (Y)</label>
+            <select id="reg_y"></select>
+            <label>Select predictors (X) – hold Ctrl/Cmd for multiple</label>
+            <select id="reg_x" multiple size="4"></select>
+          </div>
+          <button class="primary" onclick="computeRegression()">Run regression</button>
+        </div>
+        <div class="right-col">
+          <div id="reg_result" class="result">Results will appear here.</div>
+          <div id="reg_plot" style="width:100%; height:300px; margin-top:20px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== GLOBAL HELPERS ==========
+function parseNumbers(str) {
+  return str.split(/[,\s]+/).map(s => s.trim()).filter(s => s !== '').map(Number).filter(v => !isNaN(v));
+}
+function mean(arr) { return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function variance(arr) {
+  const m = mean(arr);
+  return arr.reduce((a,b)=>a+(b-m)**2,0)/(arr.length-1);
+}
+function sd(arr) { return Math.sqrt(variance(arr)); }
+
+// ========== DISTRIBUTIONS ==========
+// t distribution
+function tPDF(t, df) {
+  return Math.exp(lnGamma((df+1)/2) - lnGamma(df/2) - 0.5*Math.log(df*Math.PI)) * Math.pow(1 + t*t/df, -(df+1)/2);
+}
+function tCDF(t, df) {
+  const x = df / (df + t*t);
+  let p = 0.5 * betaIncomplete(df/2, 0.5, x);
+  return (t > 0) ? 1 - p : p;
+}
+function betaIncomplete(a, b, x) {
+  const steps = 2000;
+  let sum = 0;
+  for (let i = 0; i < steps; i++) {
+    const xi = (i + 0.5) / steps;
+    sum += Math.pow(xi, a-1) * Math.pow(1-xi, b-1);
+  }
+  return sum / steps * Math.exp(lnGamma(a)+lnGamma(b)-lnGamma(a+b));
+}
+function lnGamma(z) {
+  const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+  let x = z, y = z, tmp = x + 5.5;
+  tmp -= (x + 0.5) * Math.log(tmp);
+  let ser = 1.000000000190015;
+  for (let j = 0; j < 6; j++) ser += c[j] / ++y;
+  return -tmp + Math.log(2.5066282746310005 * ser / x);
+}
+function tQuantile(p, df) {
+  let lo = -20, hi = 20;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (tCDF(mid, df) < p) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// normal distribution
+function normalPDF(x) { return Math.exp(-x*x/2) / Math.sqrt(2*Math.PI); }
+function normalCDF(z) { return 0.5 * (1 + erf(z / Math.SQRT2)); }
+function erf(x) {
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x);
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+  const t = 1 / (1 + p * x);
+  const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return sign * y;
+}
+function normalQuantile(p) {
+  let lo = -8, hi = 8;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (normalCDF(mid) < p) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// chi-square distribution
+function chi2PDF(x, df) {
+  if (x <= 0) return 0;
+  const k = df/2;
+  return Math.exp((k-1)*Math.log(x) - x/2 - k*Math.log(2) - lnGamma(k));
+}
+function chi2CDF(x, df) {
+  if (x <= 0) return 0;
+  return lowerGamma(df/2, x/2) / Math.exp(lnGamma(df/2));
+}
+function lowerGamma(a, x) {
+  // regularized lower incomplete gamma via series
+  if (x < a + 1) {
+    let sum = 1/a, term = 1/a;
+    for (let n = 1; n < 1000; n++) {
+      term *= x/(a+n);
+      sum += term;
+      if (Math.abs(term) < 1e-15) break;
+    }
+    return sum * Math.exp(-x + a*Math.log(x) - lnGamma(a));
+  } else {
+    // upper gamma via continued fraction
+    let b = x + 1 - a, c = 1e300, d = 1/b, h = d;
+    for (let i = 1; i < 1000; i++) {
+      const an = -i*(i-a);
+      b += 2;
+      d = an*d + b;
+      if (Math.abs(d) < 1e-30) d = 1e-30;
+      c = b + an/c;
+      if (Math.abs(c) < 1e-30) c = 1e-30;
+      d = 1/d;
+      const del = d*c;
+      h *= del;
+      if (Math.abs(del - 1) < 1e-15) break;
+    }
+    return 1 - Math.exp(-x + a*Math.log(x) - lnGamma(a)) * h;
+  }
+}
+function chi2Quantile(p, df) {
+  let lo = 0, hi = 200;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (chi2CDF(mid, df) < p) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// F distribution
+function fPDF(x, df1, df2) {
+  if (x <= 0) return 0;
+  const a = df1/2, b = df2/2;
+  const logNum = a*Math.log(df1) + b*Math.log(df2) + (a-1)*Math.log(x);
+  const logDen = (a+b)*Math.log(df1*x + df2) + (lnGamma(a)+lnGamma(b)-lnGamma(a+b)) + Math.log(x) + Math.log(df1*x+df2) - Math.log(df2);
+  // simpler direct formula: 
+  const num = Math.pow(df1*x, df1) * Math.pow(df2, df2);
+  const den = Math.pow(df1*x + df2, df1+df2);
+  return Math.sqrt(num/den) / (x * betaFn(a,b));
+}
+function betaFn(a, b) {
+  return Math.exp(lnGamma(a)+lnGamma(b)-lnGamma(a+b));
+}
+function fCDF(F, df1, df2) {
+  if (F <= 0) return 0;
+  const x = df2 / (df2 + df1 * F);
+  return 1 - betaIncomplete(df2/2, df1/2, x);
+}
+function fQuantile(p, df1, df2) {
+  let lo = 0, hi = 100;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (fCDF(mid, df1, df2) < p) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// ========== TAB SWITCHING ==========
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ========== 1-SAMPLE T ==========
+function toggleOneTMode() {
+  const mode = document.getElementById('oneT_mode').value;
+  document.getElementById('oneT_summary').style.display = mode === 'summary' ? 'block' : 'none';
+  document.getElementById('oneT_data').style.display = mode === 'data' ? 'block' : 'none';
+}
+function computeOneT() {
+  const mode = document.getElementById('oneT_mode').value;
+  const conf = parseFloat(document.getElementById('oneT_conf').value);
+  const mu0 = parseFloat(document.getElementById('oneT_mu0').value);
+  const alt = document.getElementById('oneT_alt').value;
+  let n, xbar, s;
+  if (mode === 'summary') {
+    xbar = parseFloat(document.getElementById('oneT_mean').value);
+    s = parseFloat(document.getElementById('oneT_sd').value);
+    n = parseInt(document.getElementById('oneT_n').value);
+  } else {
+    const raw = parseNumbers(document.getElementById('oneT_raw').value);
+    if (raw.length < 2) { document.getElementById('oneT_result').innerHTML = '<span class="error">Need at least 2 data points.</span>'; return; }
+    n = raw.length; xbar = mean(raw); s = sd(raw);
+  }
+  if (n < 2 || isNaN(xbar) || isNaN(s) || s <= 0) {
+    document.getElementById('oneT_result').innerHTML = '<span class="error">Invalid input. Check SD>0 and n≥2.</span>'; return;
+  }
+  const se = s / Math.sqrt(n);
+  const t = (xbar - mu0) / se;
+  const df = n - 1;
+  let p;
+  if (alt === 'two-sided') p = 2 * (1 - tCDF(Math.abs(t), df));
+  else if (alt === 'greater') p = 1 - tCDF(t, df);
+  else p = tCDF(t, df);
+  const tcrit = tQuantile(1 - (1 - conf)/2, df);
+  const ciLower = xbar - tcrit * se, ciUpper = xbar + tcrit * se;
+  document.getElementById('oneT_result').innerHTML = `
+t = ${t.toFixed(4)}   (df = ${df})
+p-value (${alt}) = ${p.toFixed(6)}
+${conf*100}% CI for mean: [${ciLower.toFixed(4)}, ${ciUpper.toFixed(4)}]
+Sample mean = ${xbar.toFixed(4)}, SD = ${s.toFixed(4)}, n = ${n}
+  `;
+  plotTTest(t, df, alt, conf, 'oneT_plot');
+}
+
+function plotTTest(tObs, df, alt, conf, plotId) {
+  const xMin = -Math.max(4, Math.abs(tObs) + 1);
+  const xMax = Math.max(4, Math.abs(tObs) + 1);
+  const xVals = [], yVals = [];
+  for (let x = xMin; x <= xMax; x += 0.02) {
+    xVals.push(x);
+    yVals.push(tPDF(x, df));
+  }
+  // Build shading data by sampling segments
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 't distribution', line: {color: '#2c7da0', width: 2} }];
+  
+  // Rejection region fill
+  const alpha = 1 - conf;
+  let fillX = [], fillY = [];
+  const shapes = [];
+  if (alt === 'two-sided') {
+    const crit = tQuantile(1 - alpha/2, df);
+    // left tail
+    for (let x = xMin; x <= -crit; x += 0.02) { fillX.push(x); fillY.push(tPDF(x, df)); }
+    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
+    // right tail
+    fillX = []; fillY = [];
+    for (let x = crit; x <= xMax; x += 0.02) { fillX.push(x); fillY.push(tPDF(x, df)); }
+    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
+    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: -crit, x1: -crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+  } else if (alt === 'greater') {
+    const crit = tQuantile(1 - alpha, df);
+    for (let x = crit; x <= xMax; x += 0.02) { fillX.push(x); fillY.push(tPDF(x, df)); }
+    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
+    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+  } else {
+    const crit = tQuantile(alpha, df);
+    for (let x = xMin; x <= crit; x += 0.02) { fillX.push(x); fillY.push(tPDF(x, df)); }
+    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
+    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+  }
+  // Observed t line
+  shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: tObs, x1: tObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3}, layer: 'above' });
+  Plotly.newPlot(plotId, traces, {
+    title: `t distribution (df=${df}) with rejection regions`,
+    xaxis: {title: 't value'}, yaxis: {title: 'density'}, shapes: shapes,
+    annotations: [{x: tObs, y: 1.05, yref: 'paper', text: `t=${tObs.toFixed(2)}`, showarrow: true, arrowhead: 4, ax: 0, ay: -20}]
+  });
+}
+
+// ========== WELCH T ==========
+function toggleTwoTMode() {
+  const m1 = document.getElementById('twoT_mode1').value;
+  document.getElementById('twoT_sum1').style.display = m1 === 'summary' ? 'block' : 'none';
+  document.getElementById('twoT_data1').style.display = m1 === 'data' ? 'block' : 'none';
+}
+function toggleTwoTMode2() {
+  const m2 = document.getElementById('twoT_mode2').value;
+  document.getElementById('twoT_sum2').style.display = m2 === 'summary' ? 'block' : 'none';
+  document.getElementById('twoT_data2').style.display = m2 === 'data' ? 'block' : 'none';
+}
+function computeWelch() {
+  const mode1 = document.getElementById('twoT_mode1').value;
+  const mode2 = document.getElementById('twoT_mode2').value;
+  const alt = document.getElementById('twoT_alt').value;
+  let m1, s1, n1, m2, s2, n2;
+  if (mode1 === 'summary') {
+    m1 = parseFloat(document.getElementById('twoT_m1').value);
+    s1 = parseFloat(document.getElementById('twoT_s1').value);
+    n1 = parseInt(document.getElementById('twoT_n1').value);
+  } else {
+    const d1 = parseNumbers(document.getElementById('twoT_raw1').value);
+    if (d1.length < 2) { document.getElementById('twoT_result').innerHTML = '<span class="error">Group 1 needs ≥2 data.</span>'; return; }
+    m1 = mean(d1); s1 = sd(d1); n1 = d1.length;
+  }
+  if (mode2 === 'summary') {
+    m2 = parseFloat(document.getElementById('twoT_m2').value);
+    s2 = parseFloat(document.getElementById('twoT_s2').value);
+    n2 = parseInt(document.getElementById('twoT_n2').value);
+  } else {
+    const d2 = parseNumbers(document.getElementById('twoT_raw2').value);
+    if (d2.length < 2) { document.getElementById('twoT_result').innerHTML = '<span class="error">Group 2 needs ≥2 data.</span>'; return; }
+    m2 = mean(d2); s2 = sd(d2); n2 = d2.length;
+  }
+  const muDiff = parseFloat(document.getElementById('twoT_mu_diff').value) || 0;
+  if (n1 < 2 || n2 < 2 || s1 <= 0 || s2 <= 0) { document.getElementById('twoT_result').innerHTML = '<span class="error">Check SD>0 and n≥2.</span>'; return; }
+  const se = Math.sqrt(s1*s1/n1 + s2*s2/n2);
+  const t = (m1 - m2 - muDiff) / se;
+  const df = (s1*s1/n1 + s2*s2/n2)**2 / ((s1*s1/n1)**2/(n1-1) + (s2*s2/n2)**2/(n2-1));
+  let p;
+  if (alt === 'two-sided') p = 2 * (1 - tCDF(Math.abs(t), df));
+  else if (alt === 'greater') p = 1 - tCDF(t, df);
+  else p = tCDF(t, df);
+  const tcrit = tQuantile(0.975, df);
+  const diff = m1 - m2;
+  const ciLower = diff - tcrit * se, ciUpper = diff + tcrit * se;
+  document.getElementById('twoT_result').innerHTML = `
+Welch t = ${t.toFixed(4)}   (df = ${df.toFixed(2)})
+p-value (${alt}) = ${p.toFixed(6)}
+Difference (mean1 - mean2) = ${diff.toFixed(4)}
+95% CI for difference: [${ciLower.toFixed(4)}, ${ciUpper.toFixed(4)}]
+Group1: mean=${m1.toFixed(3)} sd=${s1.toFixed(3)} n=${n1}
+Group2: mean=${m2.toFixed(3)} sd=${s2.toFixed(3)} n=${n2}
+  `;
+  plotTTest(t, df, alt, 0.95, 'twoT_plot');
+}
+
+// ========== PROPORTIONS ==========
+function togglePropType() {
+  const t = document.getElementById('prop_type').value;
+  document.getElementById('prop_one').style.display = t === 'one' ? 'block' : 'none';
+  document.getElementById('prop_two').style.display = t === 'two' ? 'block' : 'none';
+}
+function computeProp() {
+  const type = document.getElementById('prop_type').value;
+  const conf = parseFloat(document.getElementById('prop_conf').value);
+  const alt = document.getElementById('prop_alt').value;
+  const z = normalQuantile(1 - (1 - conf) / 2);
+  if (type === 'one') {
+    const x = parseFloat(document.getElementById('prop_x1').value);
+    const n = parseFloat(document.getElementById('prop_n1').value);
+    const p0 = parseFloat(document.getElementById('prop_p0').value);
+    if (n <= 0 || x < 0 || x > n) { document.getElementById('prop_result').innerHTML = '<span class="error">Invalid x or n.</span>'; return; }
+    const phat = x / n;
+    const se = Math.sqrt(phat * (1 - phat) / n);
+    const ciLow = Math.max(0, phat - z * se), ciHigh = Math.min(1, phat + z * se);
+    const seTest = Math.sqrt(p0 * (1 - p0) / n);
+    const zTest = (phat - p0) / seTest;
+    let pval;
+    if (alt === 'two-sided') pval = 2 * (1 - normalCDF(Math.abs(zTest)));
+    else if (alt === 'greater') pval = 1 - normalCDF(zTest);
+    else pval = normalCDF(zTest);
+    document.getElementById('prop_result').innerHTML = `
+One proportion: p̂ = ${phat.toFixed(4)} (x=${x}, n=${n})
+${conf*100}% CI: [${ciLow.toFixed(4)}, ${ciHigh.toFixed(4)}]
+Test H₀: p = ${p0}, z = ${zTest.toFixed(4)}, p-value (${alt}) = ${pval.toFixed(6)}
+    `;
+    plotZTest(zTest, alt, 'prop_plot');
+  } else {
+    const x1 = parseFloat(document.getElementById('prop_x1t').value);
+    const n1 = parseFloat(document.getElementById('prop_n1t').value);
+    const x2 = parseFloat(document.getElementById('prop_x2t').value);
+    const n2 = parseFloat(document.getElementById('prop_n2t').value);
+    if (n1 <= 0 || n2 <= 0 || x1 < 0 || x1 > n1 || x2 < 0 || x2 > n2) { document.getElementById('prop_result').innerHTML = '<span class="error">Invalid counts.</span>'; return; }
+    const p1 = x1 / n1, p2 = x2 / n2;
+    const diff = p1 - p2;
+    const se = Math.sqrt(p1*(1-p1)/n1 + p2*(1-p2)/n2);
+    const ciLow = diff - z * se, ciHigh = diff + z * se;
+    const pPool = (x1 + x2) / (n1 + n2);
+    const sePool = Math.sqrt(pPool * (1 - pPool) * (1/n1 + 1/n2));
+    const zTest = diff / sePool;
+    let pval;
+    if (alt === 'two-sided') pval = 2 * (1 - normalCDF(Math.abs(zTest)));
+    else if (alt === 'greater') pval = 1 - normalCDF(zTest);
+    else pval = normalCDF(zTest);
+    document.getElementById('prop_result').innerHTML = `
+Two proportions: p̂₁ = ${p1.toFixed(4)} (${x1}/${n1}), p̂₂ = ${p2.toFixed(4)} (${x2}/${n2})
+Difference (p1 - p2) = ${diff.toFixed(4)}
+${conf*100}% CI for diff: [${ciLow.toFixed(4)}, ${ciHigh.toFixed(4)}]
+Pooled z-test: z = ${zTest.toFixed(4)}, p-value (${alt}) = ${pval.toFixed(6)}
+    `;
+    plotZTest(zTest, alt, 'prop_plot');
+  }
+}
+function plotZTest(zObs, alt, plotId) {
+  const xVals = [], yVals = [];
+  for (let x = -5; x <= 5; x += 0.02) {
+    xVals.push(x);
+    yVals.push(normalPDF(x));
+  }
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'Standard normal', line: {color: '#2c7da0', width: 2} }];
+  let fillX = [], fillY = [];
+  const shapes = [];
+  if (alt === 'two-sided') {
+    const crit = 1.96;
+    for (let x = -5; x <= -crit; x += 0.02) { fillX.push(x); fillY.push(normalPDF(x)); }
+    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
+    fillX = []; fillY = [];
+    for (let x = crit; x <= 5; x += 0.02) { fillX.push(x); fillY.push(normalPDF(x)); }
+    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
+    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: -crit, x1: -crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+  } else if (alt === 'greater') {
+    const crit = 1.645;
+    for (let x = crit; x <= 5; x += 0.02) { fillX.push(x); fillY.push(normalPDF(x)); }
+    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
+    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+  } else {
+    const crit = -1.645;
+    for (let x = -5; x <= crit; x += 0.02) { fillX.push(x); fillY.push(normalPDF(x)); }
+    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
+    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+  }
+  shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: zObs, x1: zObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3}, layer: 'above' });
+  Plotly.newPlot(plotId, traces, {
+    title: 'Standard normal with rejection regions',
+    xaxis: {title: 'z value'}, yaxis: {title: 'density'}, shapes: shapes,
+    annotations: [{x: zObs, y: 1.05, yref: 'paper', text: `z=${zObs.toFixed(2)}`, showarrow: true, arrowhead: 4, ax: 0, ay: -20}]
+  });
+}
+
+// ========== CHI-SQUARE ==========
+function toggleChi() {
+  const t = document.getElementById('chisq_type').value;
+  document.getElementById('chisq_gof').style.display = t === 'gof' ? 'block' : 'none';
+  document.getElementById('chisq_indep').style.display = t === 'indep' ? 'block' : 'none';
+  document.getElementById('chisq_tables').innerHTML = '';
+  document.getElementById('chisq_plot').innerHTML = '';
+}
+function computeChi() {
+  const type = document.getElementById('chisq_type').value;
+  const tablesDiv = document.getElementById('chisq_tables');
+  if (type === 'gof') {
+    const obs = parseNumbers(document.getElementById('chisq_obs').value);
+    let expProp = parseNumbers(document.getElementById('chisq_exp').value);
+    if (obs.length < 2) { document.getElementById('chisq_result').innerHTML = '<span class="error">Need ≥2 observed counts.</span>'; tablesDiv.innerHTML = ''; return; }
+    if (expProp.length === 0) expProp = Array(obs.length).fill(1 / obs.length);
+    if (expProp.length !== obs.length) { document.getElementById('chisq_result').innerHTML = '<span class="error">Expected proportions length must match observed.</span>'; tablesDiv.innerHTML = ''; return; }
+    const total = obs.reduce((a,b)=>a+b,0);
+    let chi2 = 0;
+    const expCounts = expProp.map(p => total * p);
+    for (let i = 0; i < obs.length; i++) {
+      const e = expCounts[i];
+      if (e <= 0) { document.getElementById('chisq_result').innerHTML = '<span class="error">Expected count ≤0.</span>'; tablesDiv.innerHTML = ''; return; }
+      chi2 += (obs[i] - e)**2 / e;
+    }
+    const df = obs.length - 1;
+    const p = 1 - chi2CDF(chi2, df);
+    document.getElementById('chisq_result').innerHTML = `GOF Chi-square = ${chi2.toFixed(4)} (df = ${df})\np-value = ${p.toFixed(6)}`;
+
+    // GOF table
+    let html = '<div class="table-title">Goodness-of-fit table</div><div class="table-wrapper"><table>';
+    html += '<tr><th>Category</th><th>Observed</th><th>Expected</th><th>O - E</th><th>(O-E)²/E</th></tr>';
+    for (let i = 0; i < obs.length; i++) {
+      const o = obs[i], e = expCounts[i], diff = o - e, contrib = (diff*diff)/e;
+      html += `<tr><td>${i+1}</td><td>${o}</td><td>${e.toFixed(3)}</td><td>${diff.toFixed(3)}</td><td>${contrib.toFixed(4)}</td></tr>`;
+    }
+    html += `<tr class="row-total"><td><b>Total</b></td><td><b>${total}</b></td><td><b>${total}</b></td><td></td><td><b>${chi2.toFixed(4)}</b></td></tr>`;
+    html += '</table></div>';
+    tablesDiv.innerHTML = html;
+
+    // Plot chi-square distribution
+    plotChiSquare(chi2, df, 'chisq_plot');
+  } else {
+    const raw = document.getElementById('chisq_table').value.trim();
+    const rows = raw.split('\n').map(line => parseNumbers(line)).filter(r => r.length > 0);
+    if (rows.length < 2 || rows[0].length < 2) { document.getElementById('chisq_result').innerHTML = '<span class="error">Need at least 2x2 table.</span>'; tablesDiv.innerHTML = ''; return; }
+    const nRows = rows.length, nCols = rows[0].length;
+    const rowSums = rows.map(r => r.reduce((a,b)=>a+b,0));
+    const colSums = Array(nCols).fill(0);
+    rows.forEach(r => r.forEach((v,j) => colSums[j] += v));
+    const total = rowSums.reduce((a,b)=>a+b,0);
+    let chi2 = 0, warn = false;
+    const expected = Array.from({ length: nRows }, () => Array(nCols).fill(0));
+    for (let i = 0; i < nRows; i++) {
+      for (let j = 0; j < nCols; j++) {
+        const e = rowSums[i] * colSums[j] / total;
+        expected[i][j] = e;
+        if (e <= 0) { warn = true; continue; }
+        chi2 += (rows[i][j] - e)**2 / e;
+      }
+    }
+    const df = (nRows - 1) * (nCols - 1);
+    const p = 1 - chi2CDF(chi2, df);
+    let out = `Chi-square = ${chi2.toFixed(4)} (df = ${df})\np-value = ${p.toFixed(6)}`;
+    if (warn) out += '\nWarning: some expected counts ≤0.';
+    document.getElementById('chisq_result').innerHTML = out;
+
+    // Observed table
+    let html = '<div class="table-title">Observed counts (with margins)</div><div class="table-wrapper"><table>';
+    html += '<tr><th></th>';
+    for (let j = 0; j < nCols; j++) html += `<th>Col ${j+1}</th>`;
+    html += '<th class="col-total">Row Total</th></tr>';
+    for (let i = 0; i < nRows; i++) {
+      html += `<tr><th>Row ${i+1}</th>`;
+      for (let j = 0; j < nCols; j++) html += `<td>${rows[i][j]}</td>`;
+      html += `<td class="row-total">${rowSums[i]}</td></tr>`;
+    }
+    html += '<tr><th class="col-total">Col Total</th>';
+    for (let j = 0; j < nCols; j++) html += `<td class="col-total">${colSums[j]}</td>`;
+    html += `<td class="grand-total">${total}</td></tr>`;
+    html += '</table></div>';
+
+    // Expected table
+    html += '<div class="table-title" style="margin-top:20px;">Expected counts (with margins)</div><div class="table-wrapper"><table>';
+    html += '<tr><th></th>';
+    for (let j = 0; j < nCols; j++) html += `<th>Col ${j+1}</th>`;
+    html += '<th class="col-total">Row Total</th></tr>';
+    for (let i = 0; i < nRows; i++) {
+      html += `<tr><th>Row ${i+1}</th>`;
+      for (let j = 0; j < nCols; j++) html += `<td>${expected[i][j].toFixed(3)}</td>`;
+      html += `<td class="row-total">${rowSums[i]}</td></tr>`;
+    }
+    html += '<tr><th class="col-total">Col Total</th>';
+    for (let j = 0; j < nCols; j++) html += `<td class="col-total">${colSums[j]}</td>`;
+    html += `<td class="grand-total">${total}</td></tr>`;
+    html += '</table></div>';
+
+    // Contributions table
+    html += '<div class="table-title" style="margin-top:20px;">Cell contributions to chi-square: (O-E)²/E</div><div class="table-wrapper"><table>';
+    html += '<tr><th></th>';
+    for (let j = 0; j < nCols; j++) html += `<th>Col ${j+1}</th>`;
+    html += '<th class="col-total">Row Sum</th></tr>';
+    for (let i = 0; i < nRows; i++) {
+      html += `<tr><th>Row ${i+1}</th>`;
+      let rowContrib = 0;
+      for (let j = 0; j < nCols; j++) {
+        const e = expected[i][j];
+        const contrib = e > 0 ? ((rows[i][j] - e)**2 / e) : 0;
+        rowContrib += contrib;
+        html += `<td>${contrib.toFixed(4)}</td>`;
+      }
+      html += `<td class="row-total">${rowContrib.toFixed(4)}</td></tr>`;
+    }
+    html += '<tr><th class="col-total">Col Sum</th>';
+    for (let j = 0; j < nCols; j++) {
+      let colContrib = 0;
+      for (let i = 0; i < nRows; i++) {
+        const e = expected[i][j];
+        colContrib += e > 0 ? ((rows[i][j] - e)**2 / e) : 0;
+      }
+      html += `<td class="col-total">${colContrib.toFixed(4)}</td>`;
+    }
+    html += `<td class="grand-total">${chi2.toFixed(4)}</td></tr>`;
+    html += '</table></div>';
+
+    tablesDiv.innerHTML = html;
+    plotChiSquare(chi2, df, 'chisq_plot');
+  }
+}
+
+function plotChiSquare(chi2Obs, df, plotId) {
+  const xMax = Math.max(chi2Obs * 1.5, chi2Quantile(0.995, df) * 1.2, 10);
+  const xVals = [], yVals = [];
+  for (let x = 0.01; x <= xMax; x += xMax/300) {
+    xVals.push(x);
+    yVals.push(chi2PDF(x, df));
+  }
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'chi-square PDF', line: {color: '#2c7da0', width: 2} }];
+  // Rejection region: right tail beyond critical value at alpha=0.05
+  const crit = chi2Quantile(0.95, df);
+  let fillX = [], fillY = [];
+  for (let x = crit; x <= xMax; x += xMax/300) { fillX.push(x); fillY.push(chi2PDF(x, df)); }
+  traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region (α=0.05)', showlegend: false });
+  const shapes = [
+    { type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} },
+    { type: 'line', xref: 'x', yref: 'paper', x0: chi2Obs, x1: chi2Obs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3}, layer: 'above' }
+  ];
+  Plotly.newPlot(plotId, traces, {
+    title: `Chi-square distribution (df=${df}) with rejection region`,
+    xaxis: {title: 'chi-square value'}, yaxis: {title: 'density'}, shapes: shapes,
+    annotations: [{x: chi2Obs, y: 1.05, yref: 'paper', text: `χ²=${chi2Obs.toFixed(2)}`, showarrow: true, arrowhead: 4, ax: 0, ay: -20}]
+  });
+}
+
+// ========== ANOVA ==========
+let anovaGroupCounter = 0;
+function toggleAnovaMode() {
+  const mode = document.getElementById('anova_mode').value;
+  document.getElementById('anova_groups').style.display = mode === 'groups' ? 'block' : 'none';
+  document.getElementById('anova_csv').style.display = mode === 'csv' ? 'block' : 'none';
+}
+function addAnovaGroup(initialValue = '') {
+  const container = document.getElementById('anova_group_container');
+  const div = document.createElement('div');
+  div.className = 'group-row';
+  div.innerHTML = `
+    <textarea placeholder="Group data (comma separated)" class="anova-group-input">${initialValue}</textarea>
+    <button onclick="this.parentElement.remove()">×</button>
+  `;
+  container.appendChild(div);
+  anovaGroupCounter++;
+}
+function handleAnovaCSV(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  Papa.parse(file, { header: true, skipEmptyLines: true, complete: (res) => {
+    const cols = res.meta.fields;
+    document.getElementById('anova_group_container').innerHTML = '';
+    cols.forEach(c => {
+      const vals = res.data.map(row => parseFloat(row[c])).filter(v => !isNaN(v));
+      addAnovaGroup(vals.join(', '));
+    });
+    document.getElementById('anova_csv_text').value = Papa.unparse(res.data);
+    alert('CSV loaded. ' + cols.length + ' groups added.');
+  }});
+}
+function parseAnovaCSV() {
+  const text = document.getElementById('anova_csv_text').value;
+  const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+  const cols = parsed.meta.fields;
+  document.getElementById('anova_group_container').innerHTML = '';
+  cols.forEach(c => {
+    const vals = parsed.data.map(row => parseFloat(row[c])).filter(v => !isNaN(v));
+    addAnovaGroup(vals.join(', '));
+  });
+  alert('Parsed ' + cols.length + ' groups.');
+}
+function computeAnova() {
+  const mode = document.getElementById('anova_mode').value;
+  let groups = [];
+  document.querySelectorAll('.anova-group-input').forEach(ta => {
+    if (ta.value.trim()) {
+      const arr = parseNumbers(ta.value);
+      if (arr.length > 0) groups.push(arr);
+    }
+  });
+  if (groups.length < 2) { document.getElementById('anova_result').innerHTML = '<span class="error">Need at least 2 groups with data.</span>'; return; }
+  const k = groups.length;
+  const allVals = groups.flat();
+  const grandMean = mean(allVals);
+  let ssBetween = 0, ssWithin = 0;
+  groups.forEach(g => {
+    const gm = mean(g);
+    ssBetween += g.length * (gm - grandMean)**2;
+    g.forEach(v => ssWithin += (v - gm)**2);
+  });
+  const dfBetween = k - 1;
+  const dfWithin = allVals.length - k;
+  const msBetween = ssBetween / dfBetween;
+  const msWithin = ssWithin / dfWithin;
+  const F = msBetween / msWithin;
+  const p = 1 - fCDF(F, dfBetween, dfWithin);
+
+  const absDevs = groups.map(g => g.map(v => Math.abs(v - mean(g))));
+  const allAbs = absDevs.flat();
+  const grandAbsMean = mean(allAbs);
+  let ssbLev = 0, sswLev = 0;
+  absDevs.forEach((g) => {
+    const gm = mean(g);
+    ssbLev += g.length * (gm - grandAbsMean)**2;
+    g.forEach(v => sswLev += (v - gm)**2);
+  });
+  const dfbLev = k - 1;
+  const dfwLev = allVals.length - k;
+  const Flev = (ssbLev / dfbLev) / (sswLev / dfwLev);
+  const pLev = 1 - fCDF(Flev, dfbLev, dfwLev);
+
+  let table = `One-way ANOVA:\n`;
+  groups.forEach((g,i) => table += `Group ${i+1}: n=${g.length}, mean=${mean(g).toFixed(3)}, sd=${sd(g).toFixed(3)}\n`);
+  table += `\nANOVA table:\nSource   SS        df   MS       F      p\nBetween  ${ssBetween.toFixed(3)}  ${dfBetween}  ${msBetween.toFixed(3)}  ${F.toFixed(4)}  ${p.toFixed(6)}\nWithin   ${ssWithin.toFixed(3)}  ${dfWithin}  ${msWithin.toFixed(3)}\nTotal    ${(ssBetween+ssWithin).toFixed(3)}  ${dfBetween+dfWithin}\n`;
+  table += `\nLevene's test (homogeneity): F = ${Flev.toFixed(4)}, df1=${dfbLev}, df2=${dfwLev}, p = ${pLev.toFixed(6)}`;
+  document.getElementById('anova_result').innerHTML = table;
+
+  plotFTest(F, dfBetween, dfWithin, 'anova_plot');
+}
+
+function plotFTest(fObs, df1, df2, plotId) {
+  const xMax = Math.max(fObs * 1.5, fQuantile(0.995, df1, df2) * 1.2, 5);
+  const xVals = [], yVals = [];
+  for (let x = 0.01; x <= xMax; x += xMax/400) {
+    xVals.push(x);
+    yVals.push(fPDF(x, df1, df2));
+  }
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'F PDF', line: {color: '#2c7da0', width: 2} }];
+  const crit = fQuantile(0.95, df1, df2);
+  let fillX = [], fillY = [];
+  for (let x = crit; x <= xMax; x += xMax/400) { fillX.push(x); fillY.push(fPDF(x, df1, df2)); }
+  traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region (α=0.05)', showlegend: false });
+  const shapes = [
+    { type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} },
+    { type: 'line', xref: 'x', yref: 'paper', x0: fObs, x1: fObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3}, layer: 'above' }
+  ];
+  Plotly.newPlot(plotId, traces, {
+    title: `F distribution (df1=${df1}, df2=${df2}) with rejection region`,
+    xaxis: {title: 'F value'}, yaxis: {title: 'density'}, shapes: shapes,
+    annotations: [{x: fObs, y: 1.05, yref: 'paper', text: `F=${fObs.toFixed(2)}`, showarrow: true, arrowhead: 4, ax: 0, ay: -20}]
+  });
+}
+
+// ========== REGRESSION ==========
+let regData = null;
+function handleRegCSV(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  Papa.parse(file, { header: true, skipEmptyLines: true, complete: (res) => {
+    regData = res.data;
+    populateRegSelectors(Object.keys(regData[0]));
+    document.getElementById('reg_csv_text').value = Papa.unparse(regData);
+  }});
+}
+function parseRegCSV() {
+  const text = document.getElementById('reg_csv_text').value;
+  const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+  if (parsed.data.length === 0) return;
+  regData = parsed.data;
+  populateRegSelectors(Object.keys(regData[0]));
+  alert('CSV parsed. ' + Object.keys(regData[0]).length + ' columns.');
+}
+function populateRegSelectors(cols) {
+  const ySel = document.getElementById('reg_y');
+  const xSel = document.getElementById('reg_x');
+  ySel.innerHTML = ''; xSel.innerHTML = '';
+  cols.forEach(c => {
+    ySel.innerHTML += `<option value="${c}">${c}</option>`;
+    xSel.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+}
+function computeRegression() {
+  if (!regData || regData.length === 0) { document.getElementById('reg_result').innerHTML = '<span class="error">No data loaded.</span>'; return; }
+  const yCol = document.getElementById('reg_y').value;
+  const xCols = Array.from(document.getElementById('reg_x').selectedOptions).map(o => o.value);
+  if (xCols.length === 0) { document.getElementById('reg_result').innerHTML = '<span class="error">Select at least one predictor.</span>'; return; }
+  const data = regData.map(row => ({ y: parseFloat(row[yCol]), x: xCols.map(c => parseFloat(row[c])) })).filter(r => !isNaN(r.y) && r.x.every(v => !isNaN(v)));
+  if (data.length < xCols.length + 2) { document.getElementById('reg_result').innerHTML = '<span class="error">Not enough complete rows.</span>'; return; }
+  const n = data.length;
+  const p = xCols.length;
+  const X = data.map(r => [1, ...r.x]);
+  const Y = data.map(r => r.y);
+  const XtX = Array.from({ length: p+1 }, () => Array(p+1).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= p; j++) {
+      for (let k = 0; k <= p; k++) {
+        XtX[j][k] += X[i][j] * X[i][k];
+      }
+    }
+  }
+  const XtY = Array(p+1).fill(0);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= p; j++) XtY[j] += X[i][j] * Y[i];
+  }
+  const inv = Array.from({ length: p+1 }, (_, i) => {
+    const row = Array(p+1).fill(0); row[i] = 1; return row;
+  });
+  const aug = XtX.map((row, i) => [...row, ...inv[i]]);
+  for (let i = 0; i <= p; i++) {
+    let pivot = i;
+    for (let r = i+1; r <= p; r++) if (Math.abs(aug[r][i]) > Math.abs(aug[pivot][i])) pivot = r;
+    if (Math.abs(aug[pivot][i]) < 1e-12) { document.getElementById('reg_result').innerHTML = '<span class="error">Singular matrix – check collinearity.</span>'; return; }
+    [aug[i], aug[pivot]] = [aug[pivot], aug[i]];
+    const div = aug[i][i];
+    for (let c = i; c <= 2*(p+1)-1; c++) aug[i][c] /= div;
+    for (let r = 0; r <= p; r++) {
+      if (r === i) continue;
+      const factor = aug[r][i];
+      for (let c = i; c <= 2*(p+1)-1; c++) aug[r][c] -= factor * aug[i][c];
+    }
+  }
+  const invXtX = aug.map(row => row.slice(p+1));
+  const beta = Array(p+1).fill(0);
+  for (let j = 0; j <= p; j++) {
+    for (let k = 0; k <= p; k++) beta[j] += invXtX[j][k] * XtY[k];
+  }
+  const fitted = X.map(row => row.reduce((s, v, j) => s + v * beta[j], 0));
+  const residuals = Y.map((y, i) => y - fitted[i]);
+  const sse = residuals.reduce((s, r) => s + r*r, 0);
+  const dfResid = n - (p+1);
+  const mse = sse / dfResid;
+  const seBeta = invXtX.map((row, i) => Math.sqrt(mse * row[i]));
+  const tVals = beta.map((b, i) => b / seBeta[i]);
+  const pVals = tVals.map(t => 2 * (1 - tCDF(Math.abs(t), dfResid)));
+  const yMean = mean(Y);
+  const sst = Y.reduce((s, y) => s + (y - yMean)**2, 0);
+  const r2 = 1 - sse / sst;
+  const adjR2 = 1 - (1 - r2) * (n - 1) / (n - p - 1);
+
+  let interpretation = '<div class="interpretation"><strong>Interpretation of slopes:</strong><br>';
+  xCols.forEach((c, i) => {
+    const b = beta[i+1];
+    const pv = pVals[i+1];
+    const sig = pv < 0.05 ? 'statistically significant' : 'not statistically significant';
+    const dir = b > 0 ? 'increases' : 'decreases';
+    interpretation += `For each one-unit increase in <b>${c}</b>, the predicted <b>${yCol}</b> ${dir} by approximately <b>${Math.abs(b).toFixed(3)}</b> units (p = ${pv.toFixed(4)}, ${sig}).<br>`;
+  });
+  interpretation += '</div>';
+
+  let out = `Multiple regression: Y = ${yCol}\nPredictors: ${xCols.join(', ')}\n\n`;
+  out += `Coefficients:\n`;
+  out += `Intercept: ${beta[0].toFixed(4)}  (SE ${seBeta[0].toFixed(4)}, t=${tVals[0].toFixed(3)}, p=${pVals[0].toFixed(5)})\n`;
+  xCols.forEach((c, i) => {
+    out += `${c}: ${beta[i+1].toFixed(4)}  (SE ${seBeta[i+1].toFixed(4)}, t=${tVals[i+1].toFixed(3)}, p=${pVals[i+1].toFixed(5)})\n`;
+  });
+  out += `\nR² = ${r2.toFixed(4)}, adj R² = ${adjR2.toFixed(4)}, n = ${n}, residual df = ${dfResid}`;
+  document.getElementById('reg_result').innerHTML = out + interpretation;
+
+  if (document.getElementById('reg_plot')) {
+    const trace1 = { x: fitted, y: residuals, mode: 'markers', type: 'scatter', marker: { color: '#2c7da0', size: 8 }, name: 'Residuals' };
+    const trace2 = { x: [Math.min(...fitted), Math.max(...fitted)], y: [0,0], mode: 'lines', type: 'scatter', line: { color: '#b23b3b', dash: 'dash' }, name: 'Zero line' };
+    Plotly.newPlot('reg_plot', [trace1, trace2], { title: 'Residuals vs Fitted', xaxis: { title: 'Fitted values' }, yaxis: { title: 'Residuals' }, margin: { t: 40 } });
+  }
+}
+
+// ========== INITIALIZATION ==========
+toggleOneTMode();
+toggleTwoTMode();
+toggleTwoTMode2();
+togglePropType();
+toggleChi();
+toggleAnovaMode();
+
+addAnovaGroup('23, 25, 21, 22, 24, 26, 20');
+addAnovaGroup('19, 20, 18, 21, 17, 22, 19');
+addAnovaGroup('28, 30, 27, 29, 31, 26, 25');
+addAnovaGroup('');
+addAnovaGroup('');
+
+setTimeout(() => {
+  if (regData === null) {
+    const text = document.getElementById('reg_csv_text').value;
+    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+    if (parsed.data.length > 0) {
+      regData = parsed.data;
+      populateRegSelectors(Object.keys(regData[0]));
+    }
+  }
+}, 100);
+</script>
+</body>
+</html>
