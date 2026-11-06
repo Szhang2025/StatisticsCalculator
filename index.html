@@ -37,13 +37,12 @@
     .group-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
     .group-row textarea { flex: 1; min-height: 50px; }
     .group-row button { background: #ffe0e0; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-weight: bold; color: #b23b3b; }
-    .hypothesis-plot { width: 100%; height: 320px; margin-top: 16px; }
+    .hypothesis-plot { width: 100%; height: 360px; margin-top: 16px; }
     .error { color: #b23b3b; background: #ffe6e6; padding: 12px; border-radius: 16px; }
     .interpretation { background: #e8f4e8; border-left: 6px solid #3c9e5c; padding: 14px 18px; border-radius: 14px; margin-top: 16px; font-size: 0.92rem; line-height: 1.5; }
     .tab-content { display: flex; flex-wrap: wrap; gap: 28px; }
     .left-col { flex: 1 1 380px; }
     .right-col { flex: 1 1 520px; }
-    .plot-container { min-height: 300px; }
     table { border-collapse: collapse; width: 100%; font-size: 0.9rem; margin: 12px 0; }
     th { background: #e1eff9; padding: 10px 12px; text-align: center; font-weight: 600; border: 1px solid #c5d9e8; }
     td { padding: 8px 12px; border: 1px solid #d0dfea; text-align: center; }
@@ -53,14 +52,21 @@
     .table-section { margin-top: 20px; }
     .table-title { font-weight: 600; color: #1b3a55; margin-bottom: 8px; font-size: 1rem; }
     .table-wrapper { overflow-x: auto; }
+    .problem-bank { position: relative; display: inline-block; cursor: help; }
+    .problem-bank .popup-link { display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 6px; background: #2c7da0; color: #fff; padding: 8px 14px; border-radius: 10px; text-decoration: none; font-size: 0.85rem; white-space: nowrap; box-shadow: 0 6px 16px rgba(0,0,0,0.2); z-index: 10; }
+    .problem-bank:hover .popup-link { display: inline-block; }
   </style>
 </head>
 <body>
 <div class="app">
-  <h1>📊 Statistical calculator</h1>
+  <h1>📊 Statistical calculator
+    <span class="problem-bank" style="font-size:0.55em; font-weight:500; color:#2c7da0; margin-left:12px; vertical-align:middle;">
+      Problem bank
+      <a class="popup-link" href="https://szhang2025.github.io/StatisticsCalculator/" target="_blank" rel="noopener noreferrer">📊 Open Statistics Calculator →</a>
+    </span>
+  </h1>
   <div class="subhead">One‑sample t / CI · Two‑sample Welch t · Proportions · Chi‑square GOF & independence · One‑way ANOVA & homogeneity · Multiple regression (CSV upload)</div>
 
-  <!-- TABS -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="oneT">1‑sample t / CI</button>
     <button class="tab-btn" data-tab="twoT">Welch t‑test</button>
@@ -336,7 +342,6 @@ function variance(arr) {
 function sd(arr) { return Math.sqrt(variance(arr)); }
 
 // ========== DISTRIBUTIONS ==========
-// t distribution
 function tPDF(t, df) {
   return Math.exp(lnGamma((df+1)/2) - lnGamma(df/2) - 0.5*Math.log(df*Math.PI)) * Math.pow(1 + t*t/df, -(df+1)/2);
 }
@@ -371,7 +376,6 @@ function tQuantile(p, df) {
   return (lo + hi) / 2;
 }
 
-// normal distribution
 function normalPDF(x) { return Math.exp(-x*x/2) / Math.sqrt(2*Math.PI); }
 function normalCDF(z) { return 0.5 * (1 + erf(z / Math.SQRT2)); }
 function erf(x) {
@@ -391,7 +395,7 @@ function normalQuantile(p) {
   return (lo + hi) / 2;
 }
 
-// chi-square distribution
+// chi-square
 function chi2PDF(x, df) {
   if (x <= 0) return 0;
   const k = df/2;
@@ -399,34 +403,31 @@ function chi2PDF(x, df) {
 }
 function chi2CDF(x, df) {
   if (x <= 0) return 0;
-  return lowerGamma(df/2, x/2) / Math.exp(lnGamma(df/2));
+  return gammaP(df / 2, x / 2);
 }
-function lowerGamma(a, x) {
-  // regularized lower incomplete gamma via series
-  if (x < a + 1) {
-    let sum = 1/a, term = 1/a;
-    for (let n = 1; n < 1000; n++) {
-      term *= x/(a+n);
+function gammaP(a, z) {
+  if (z < a + 1) {
+    let sum = 1 / a, term = 1 / a;
+    for (let n = 1; n < 500; n++) {
+      term *= z / (a + n);
       sum += term;
       if (Math.abs(term) < 1e-15) break;
     }
-    return sum * Math.exp(-x + a*Math.log(x) - lnGamma(a));
+    return sum * Math.exp(-z + a * Math.log(z) - lnGamma(a));
   } else {
-    // upper gamma via continued fraction
-    let b = x + 1 - a, c = 1e300, d = 1/b, h = d;
-    for (let i = 1; i < 1000; i++) {
-      const an = -i*(i-a);
+    let b = z + 1 - a, c = 1e300, d = 1 / b, h = d;
+    for (let i = 1; i < 500; i++) {
+      const an = -i * (i - a);
       b += 2;
-      d = an*d + b;
-      if (Math.abs(d) < 1e-30) d = 1e-30;
-      c = b + an/c;
-      if (Math.abs(c) < 1e-30) c = 1e-30;
-      d = 1/d;
-      const del = d*c;
+      d = an * d + b; if (Math.abs(d) < 1e-30) d = 1e-30;
+      c = b + an / c; if (Math.abs(c) < 1e-30) c = 1e-30;
+      d = 1 / d;
+      const del = d * c;
       h *= del;
       if (Math.abs(del - 1) < 1e-15) break;
     }
-    return 1 - Math.exp(-x + a*Math.log(x) - lnGamma(a)) * h;
+    const Q = Math.exp(-z + a * Math.log(z) - lnGamma(a)) * h;
+    return 1 - Q;
   }
 }
 function chi2Quantile(p, df) {
@@ -438,19 +439,10 @@ function chi2Quantile(p, df) {
   return (lo + hi) / 2;
 }
 
-// F distribution
 function fPDF(x, df1, df2) {
   if (x <= 0) return 0;
   const a = df1/2, b = df2/2;
-  const logNum = a*Math.log(df1) + b*Math.log(df2) + (a-1)*Math.log(x);
-  const logDen = (a+b)*Math.log(df1*x + df2) + (lnGamma(a)+lnGamma(b)-lnGamma(a+b)) + Math.log(x) + Math.log(df1*x+df2) - Math.log(df2);
-  // simpler direct formula: 
-  const num = Math.pow(df1*x, df1) * Math.pow(df2, df2);
-  const den = Math.pow(df1*x + df2, df1+df2);
-  return Math.sqrt(num/den) / (x * betaFn(a,b));
-}
-function betaFn(a, b) {
-  return Math.exp(lnGamma(a)+lnGamma(b)-lnGamma(a+b));
+  return Math.exp(a*Math.log(df1) + b*Math.log(df2) + (a-1)*Math.log(x) - (a+b)*Math.log(df1*x+df2)) / Math.exp(lnGamma(a)+lnGamma(b)-lnGamma(a+b));
 }
 function fCDF(F, df1, df2) {
   if (F <= 0) return 0;
@@ -464,6 +456,21 @@ function fQuantile(p, df1, df2) {
     if (fCDF(mid, df1, df2) < p) lo = mid; else hi = mid;
   }
   return (lo + hi) / 2;
+}
+
+// ========== POLYGON SHADING HELPER ==========
+function shadePolygon(traces, xLo, xHi, pdfFn, xStep, color, name) {
+  if (xHi <= xLo) return;
+  const xs = [], ys = [];
+  for (let x = xLo; x <= xHi; x += xStep) { xs.push(x); ys.push(pdfFn(x)); }
+  if (xs.length === 0 || xs[xs.length-1] < xHi) { xs.push(xHi); ys.push(pdfFn(xHi)); }
+  xs.push(xHi); ys.push(0);
+  xs.push(xLo); ys.push(0);
+  traces.push({
+    x: xs, y: ys, mode: 'lines', fill: 'toself',
+    fillcolor: color, line: {width: 0},
+    name: name, showlegend: true, hoverinfo: 'skip'
+  });
 }
 
 // ========== TAB SWITCHING ==========
@@ -519,48 +526,50 @@ Sample mean = ${xbar.toFixed(4)}, SD = ${s.toFixed(4)}, n = ${n}
 }
 
 function plotTTest(tObs, df, alt, conf, plotId) {
+  const alpha = 1 - conf;
   const xMin = -Math.max(4, Math.abs(tObs) + 1);
   const xMax = Math.max(4, Math.abs(tObs) + 1);
+  const step = (xMax - xMin) / 300;
+  const pdf = x => tPDF(x, df);
+
   const xVals = [], yVals = [];
-  for (let x = xMin; x <= xMax; x += 0.02) {
-    xVals.push(x);
-    yVals.push(tPDF(x, df));
-  }
-  // Build shading data by sampling segments
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 't distribution', line: {color: '#2c7da0', width: 2} }];
-  
-  // Rejection region fill
-  const alpha = 1 - conf;
-  let fillX = [], fillY = [];
-  const shapes = [];
+  for (let x = xMin; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 't density', line: {color: '#2c7da0', width: 2} }];
+
+  // α region (red)
   if (alt === 'two-sided') {
     const crit = tQuantile(1 - alpha/2, df);
-    // left tail
-    for (let x = xMin; x <= -crit; x += 0.02) { fillX.push(x); fillY.push(tPDF(x, df)); }
-    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
-    // right tail
-    fillX = []; fillY = [];
-    for (let x = crit; x <= xMax; x += 0.02) { fillX.push(x); fillY.push(tPDF(x, df)); }
-    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
-    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: -crit, x1: -crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
-    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+    shadePolygon(traces, xMin, -crit, pdf, step, 'rgba(220,53,69,0.45)', `α region (|t| > ${crit.toFixed(2)})`);
+    shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (|t| > ${crit.toFixed(2)})`);
   } else if (alt === 'greater') {
     const crit = tQuantile(1 - alpha, df);
-    for (let x = crit; x <= xMax; x += 0.02) { fillX.push(x); fillY.push(tPDF(x, df)); }
-    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
-    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+    shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (t > ${crit.toFixed(2)})`);
   } else {
     const crit = tQuantile(alpha, df);
-    for (let x = xMin; x <= crit; x += 0.02) { fillX.push(x); fillY.push(tPDF(x, df)); }
-    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
-    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+    shadePolygon(traces, xMin, crit, pdf, step, 'rgba(220,53,69,0.45)', `α region (t < ${crit.toFixed(2)})`);
   }
-  // Observed t line
-  shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: tObs, x1: tObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3}, layer: 'above' });
+
+  // p-value region (yellow, on top)
+  if (alt === 'two-sided') {
+    const absT = Math.abs(tObs);
+    shadePolygon(traces, xMin, -absT, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (|t| > ${absT.toFixed(2)})`);
+    shadePolygon(traces, absT, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (|t| > ${absT.toFixed(2)})`);
+  } else if (alt === 'greater') {
+    shadePolygon(traces, tObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (t > ${tObs.toFixed(2)})`);
+  } else {
+    shadePolygon(traces, xMin, tObs, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (t < ${tObs.toFixed(2)})`);
+  }
+
+  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 't density', line: {color: '#2c7da0', width: 2}, showlegend: false });
+
+  const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: tObs, x1: tObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
+
   Plotly.newPlot(plotId, traces, {
-    title: `t distribution (df=${df}) with rejection regions`,
-    xaxis: {title: 't value'}, yaxis: {title: 'density'}, shapes: shapes,
-    annotations: [{x: tObs, y: 1.05, yref: 'paper', text: `t=${tObs.toFixed(2)}`, showarrow: true, arrowhead: 4, ax: 0, ay: -20}]
+    title: `t (df = ${df}) — red = α region (reject zone), yellow = p-value region (observed tail)`,
+    xaxis: {title: 't value'}, yaxis: {title: 'density'},
+    shapes: shapes,
+    annotations: [{ x: tObs, y: 1.08, yref: 'paper', text: `observed t = ${tObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    legend: { orientation: 'h', y: -0.25 }
   });
 }
 
@@ -651,7 +660,7 @@ One proportion: p̂ = ${phat.toFixed(4)} (x=${x}, n=${n})
 ${conf*100}% CI: [${ciLow.toFixed(4)}, ${ciHigh.toFixed(4)}]
 Test H₀: p = ${p0}, z = ${zTest.toFixed(4)}, p-value (${alt}) = ${pval.toFixed(6)}
     `;
-    plotZTest(zTest, alt, 'prop_plot');
+    plotZTest(zTest, alt, conf, 'prop_plot');
   } else {
     const x1 = parseFloat(document.getElementById('prop_x1t').value);
     const n1 = parseFloat(document.getElementById('prop_n1t').value);
@@ -675,43 +684,51 @@ Difference (p1 - p2) = ${diff.toFixed(4)}
 ${conf*100}% CI for diff: [${ciLow.toFixed(4)}, ${ciHigh.toFixed(4)}]
 Pooled z-test: z = ${zTest.toFixed(4)}, p-value (${alt}) = ${pval.toFixed(6)}
     `;
-    plotZTest(zTest, alt, 'prop_plot');
+    plotZTest(zTest, alt, conf, 'prop_plot');
   }
 }
-function plotZTest(zObs, alt, plotId) {
+function plotZTest(zObs, alt, conf, plotId) {
+  const alpha = 1 - conf;
+  const xMin = -5, xMax = 5, step = 10/300;
+  const pdf = normalPDF;
+  const zCritTwo = normalQuantile(1 - alpha/2);
+  const zCritOne = normalQuantile(1 - alpha);
+
   const xVals = [], yVals = [];
-  for (let x = -5; x <= 5; x += 0.02) {
-    xVals.push(x);
-    yVals.push(normalPDF(x));
-  }
+  for (let x = xMin; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
   const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'Standard normal', line: {color: '#2c7da0', width: 2} }];
-  let fillX = [], fillY = [];
-  const shapes = [];
+
+  // α region (red)
   if (alt === 'two-sided') {
-    const crit = 1.96;
-    for (let x = -5; x <= -crit; x += 0.02) { fillX.push(x); fillY.push(normalPDF(x)); }
-    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
-    fillX = []; fillY = [];
-    for (let x = crit; x <= 5; x += 0.02) { fillX.push(x); fillY.push(normalPDF(x)); }
-    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
-    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: -crit, x1: -crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
-    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+    shadePolygon(traces, xMin, -zCritTwo, pdf, step, 'rgba(220,53,69,0.45)', `α region (|z| > ${zCritTwo.toFixed(2)})`);
+    shadePolygon(traces, zCritTwo, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (|z| > ${zCritTwo.toFixed(2)})`);
   } else if (alt === 'greater') {
-    const crit = 1.645;
-    for (let x = crit; x <= 5; x += 0.02) { fillX.push(x); fillY.push(normalPDF(x)); }
-    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
-    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+    shadePolygon(traces, zCritOne, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (z > ${zCritOne.toFixed(2)})`);
   } else {
-    const crit = -1.645;
-    for (let x = -5; x <= crit; x += 0.02) { fillX.push(x); fillY.push(normalPDF(x)); }
-    traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region', showlegend: false });
-    shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} });
+    shadePolygon(traces, xMin, -zCritOne, pdf, step, 'rgba(220,53,69,0.45)', `α region (z < ${-zCritOne.toFixed(2)})`);
   }
-  shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: zObs, x1: zObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3}, layer: 'above' });
+
+  // p-value region (yellow)
+  if (alt === 'two-sided') {
+    const absZ = Math.abs(zObs);
+    shadePolygon(traces, xMin, -absZ, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (|z| > ${absZ.toFixed(2)})`);
+    shadePolygon(traces, absZ, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (|z| > ${absZ.toFixed(2)})`);
+  } else if (alt === 'greater') {
+    shadePolygon(traces, zObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (z > ${zObs.toFixed(2)})`);
+  } else {
+    shadePolygon(traces, xMin, zObs, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (z < ${zObs.toFixed(2)})`);
+  }
+
+  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'Standard normal', line: {color: '#2c7da0', width: 2}, showlegend: false });
+
+  const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: zObs, x1: zObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
+
   Plotly.newPlot(plotId, traces, {
-    title: 'Standard normal with rejection regions',
-    xaxis: {title: 'z value'}, yaxis: {title: 'density'}, shapes: shapes,
-    annotations: [{x: zObs, y: 1.05, yref: 'paper', text: `z=${zObs.toFixed(2)}`, showarrow: true, arrowhead: 4, ax: 0, ay: -20}]
+    title: `Standard normal — red = α region (reject zone), yellow = p-value region (observed tail)`,
+    xaxis: {title: 'z value'}, yaxis: {title: 'density'},
+    shapes: shapes,
+    annotations: [{ x: zObs, y: 1.08, yref: 'paper', text: `observed z = ${zObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    legend: { orientation: 'h', y: -0.25 }
   });
 }
 
@@ -744,7 +761,6 @@ function computeChi() {
     const p = 1 - chi2CDF(chi2, df);
     document.getElementById('chisq_result').innerHTML = `GOF Chi-square = ${chi2.toFixed(4)} (df = ${df})\np-value = ${p.toFixed(6)}`;
 
-    // GOF table
     let html = '<div class="table-title">Goodness-of-fit table</div><div class="table-wrapper"><table>';
     html += '<tr><th>Category</th><th>Observed</th><th>Expected</th><th>O - E</th><th>(O-E)²/E</th></tr>';
     for (let i = 0; i < obs.length; i++) {
@@ -754,8 +770,6 @@ function computeChi() {
     html += `<tr class="row-total"><td><b>Total</b></td><td><b>${total}</b></td><td><b>${total}</b></td><td></td><td><b>${chi2.toFixed(4)}</b></td></tr>`;
     html += '</table></div>';
     tablesDiv.innerHTML = html;
-
-    // Plot chi-square distribution
     plotChiSquare(chi2, df, 'chisq_plot');
   } else {
     const raw = document.getElementById('chisq_table').value.trim();
@@ -782,7 +796,6 @@ function computeChi() {
     if (warn) out += '\nWarning: some expected counts ≤0.';
     document.getElementById('chisq_result').innerHTML = out;
 
-    // Observed table
     let html = '<div class="table-title">Observed counts (with margins)</div><div class="table-wrapper"><table>';
     html += '<tr><th></th>';
     for (let j = 0; j < nCols; j++) html += `<th>Col ${j+1}</th>`;
@@ -797,7 +810,6 @@ function computeChi() {
     html += `<td class="grand-total">${total}</td></tr>`;
     html += '</table></div>';
 
-    // Expected table
     html += '<div class="table-title" style="margin-top:20px;">Expected counts (with margins)</div><div class="table-wrapper"><table>';
     html += '<tr><th></th>';
     for (let j = 0; j < nCols; j++) html += `<th>Col ${j+1}</th>`;
@@ -812,7 +824,6 @@ function computeChi() {
     html += `<td class="grand-total">${total}</td></tr>`;
     html += '</table></div>';
 
-    // Contributions table
     html += '<div class="table-title" style="margin-top:20px;">Cell contributions to chi-square: (O-E)²/E</div><div class="table-wrapper"><table>';
     html += '<tr><th></th>';
     for (let j = 0; j < nCols; j++) html += `<th>Col ${j+1}</th>`;
@@ -846,26 +857,29 @@ function computeChi() {
 }
 
 function plotChiSquare(chi2Obs, df, plotId) {
+  const alpha = 0.05;
   const xMax = Math.max(chi2Obs * 1.5, chi2Quantile(0.995, df) * 1.2, 10);
+  const step = xMax / 400;
+  const pdf = x => chi2PDF(x, df);
+
   const xVals = [], yVals = [];
-  for (let x = 0.01; x <= xMax; x += xMax/300) {
-    xVals.push(x);
-    yVals.push(chi2PDF(x, df));
-  }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'chi-square PDF', line: {color: '#2c7da0', width: 2} }];
-  // Rejection region: right tail beyond critical value at alpha=0.05
-  const crit = chi2Quantile(0.95, df);
-  let fillX = [], fillY = [];
-  for (let x = crit; x <= xMax; x += xMax/300) { fillX.push(x); fillY.push(chi2PDF(x, df)); }
-  traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region (α=0.05)', showlegend: false });
-  const shapes = [
-    { type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} },
-    { type: 'line', xref: 'x', yref: 'paper', x0: chi2Obs, x1: chi2Obs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3}, layer: 'above' }
-  ];
+  for (let x = 0.01; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'χ² density', line: {color: '#2c7da0', width: 2} }];
+
+  const crit = chi2Quantile(1 - alpha, df);
+  shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (χ² > ${crit.toFixed(2)})`);
+  shadePolygon(traces, chi2Obs, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (χ² > ${chi2Obs.toFixed(2)})`);
+
+  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'χ² density', line: {color: '#2c7da0', width: 2}, showlegend: false });
+
+  const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: chi2Obs, x1: chi2Obs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
+
   Plotly.newPlot(plotId, traces, {
-    title: `Chi-square distribution (df=${df}) with rejection region`,
-    xaxis: {title: 'chi-square value'}, yaxis: {title: 'density'}, shapes: shapes,
-    annotations: [{x: chi2Obs, y: 1.05, yref: 'paper', text: `χ²=${chi2Obs.toFixed(2)}`, showarrow: true, arrowhead: 4, ax: 0, ay: -20}]
+    title: `χ² (df = ${df}) — red = α region (reject zone), yellow = p-value region (observed tail)`,
+    xaxis: {title: 'χ² value'}, yaxis: {title: 'density'},
+    shapes: shapes,
+    annotations: [{ x: chi2Obs, y: 1.08, yref: 'paper', text: `observed χ² = ${chi2Obs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    legend: { orientation: 'h', y: -0.25 }
   });
 }
 
@@ -962,25 +976,29 @@ function computeAnova() {
 }
 
 function plotFTest(fObs, df1, df2, plotId) {
+  const alpha = 0.05;
   const xMax = Math.max(fObs * 1.5, fQuantile(0.995, df1, df2) * 1.2, 5);
+  const step = xMax / 400;
+  const pdf = x => fPDF(x, df1, df2);
+
   const xVals = [], yVals = [];
-  for (let x = 0.01; x <= xMax; x += xMax/400) {
-    xVals.push(x);
-    yVals.push(fPDF(x, df1, df2));
-  }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'F PDF', line: {color: '#2c7da0', width: 2} }];
-  const crit = fQuantile(0.95, df1, df2);
-  let fillX = [], fillY = [];
-  for (let x = crit; x <= xMax; x += xMax/400) { fillX.push(x); fillY.push(fPDF(x, df1, df2)); }
-  traces.push({ x: fillX, y: fillY, mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(178,59,59,0.30)', line: {width: 0}, name: 'Rejection region (α=0.05)', showlegend: false });
-  const shapes = [
-    { type: 'line', xref: 'x', yref: 'paper', x0: crit, x1: crit, y0: 0, y1: 1, line: {color: '#b23b3b', width: 2, dash: 'dash'} },
-    { type: 'line', xref: 'x', yref: 'paper', x0: fObs, x1: fObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3}, layer: 'above' }
-  ];
+  for (let x = 0.01; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'F density', line: {color: '#2c7da0', width: 2} }];
+
+  const crit = fQuantile(1 - alpha, df1, df2);
+  shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (F > ${crit.toFixed(2)})`);
+  shadePolygon(traces, fObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (F > ${fObs.toFixed(2)})`);
+
+  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'F density', line: {color: '#2c7da0', width: 2}, showlegend: false });
+
+  const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: fObs, x1: fObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
+
   Plotly.newPlot(plotId, traces, {
-    title: `F distribution (df1=${df1}, df2=${df2}) with rejection region`,
-    xaxis: {title: 'F value'}, yaxis: {title: 'density'}, shapes: shapes,
-    annotations: [{x: fObs, y: 1.05, yref: 'paper', text: `F=${fObs.toFixed(2)}`, showarrow: true, arrowhead: 4, ax: 0, ay: -20}]
+    title: `F (df₁ = ${df1}, df₂ = ${df2}) — red = α region (reject zone), yellow = p-value region (observed tail)`,
+    xaxis: {title: 'F value'}, yaxis: {title: 'density'},
+    shapes: shapes,
+    annotations: [{ x: fObs, y: 1.08, yref: 'paper', text: `observed F = ${fObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    legend: { orientation: 'h', y: -0.25 }
   });
 }
 
