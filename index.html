@@ -459,7 +459,7 @@ function fQuantile(p, df1, df2) {
 }
 
 // ========== POLYGON SHADING HELPER ==========
-function shadePolygon(traces, xLo, xHi, pdfFn, xStep, color, name) {
+function shadePolygon(traces, xLo, xHi, pdfFn, xStep, color, name, showLegend) {
   if (xHi <= xLo) return;
   const xs = [], ys = [];
   for (let x = xLo; x <= xHi; x += xStep) { xs.push(x); ys.push(pdfFn(x)); }
@@ -469,7 +469,7 @@ function shadePolygon(traces, xLo, xHi, pdfFn, xStep, color, name) {
   traces.push({
     x: xs, y: ys, mode: 'lines', fill: 'toself',
     fillcolor: color, line: {width: 0},
-    name: name, showlegend: true, hoverinfo: 'skip'
+    name: name, showlegend: showLegend, hoverinfo: 'skip'
   });
 }
 
@@ -522,11 +522,10 @@ p-value (${alt}) = ${p.toFixed(6)}
 ${conf*100}% CI for mean: [${ciLower.toFixed(4)}, ${ciUpper.toFixed(4)}]
 Sample mean = ${xbar.toFixed(4)}, SD = ${s.toFixed(4)}, n = ${n}
   `;
-  plotTTest(t, df, alt, conf, 'oneT_plot');
+  plotTTest(t, df, alt, 'oneT_plot');
 }
 
-function plotTTest(tObs, df, alt, conf, plotId) {
-  const alpha = 1 - conf;
+function plotTTest(tObs, df, alt, plotId) {
   const xMin = -Math.max(4, Math.abs(tObs) + 1);
   const xMax = Math.max(4, Math.abs(tObs) + 1);
   const step = (xMax - xMin) / 300;
@@ -534,33 +533,19 @@ function plotTTest(tObs, df, alt, conf, plotId) {
 
   const xVals = [], yVals = [];
   for (let x = xMin; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false }];
 
-  // α region: single trace per side, showlegend: true
-  if (alt === 'two-sided') {
-    const crit = tQuantile(1 - alpha/2, df);
-    shadePolygon(traces, xMin, -crit, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
-    shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
-  } else if (alt === 'greater') {
-    const crit = tQuantile(1 - alpha, df);
-    shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
-  } else {
-    const crit = tQuantile(alpha, df);
-    shadePolygon(traces, xMin, crit, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
-  }
-
-  // p-value region: single trace per side, showlegend: true
+  // p-value region only (no α region)
   if (alt === 'two-sided') {
     const absT = Math.abs(tObs);
-    shadePolygon(traces, xMin, -absT, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
-    shadePolygon(traces, absT, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
+    shadePolygon(traces, xMin, -absT, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region', true);
+    shadePolygon(traces, absT, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region', false);
   } else if (alt === 'greater') {
-    shadePolygon(traces, tObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
+    shadePolygon(traces, tObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region', true);
   } else {
-    shadePolygon(traces, xMin, tObs, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
+    shadePolygon(traces, xMin, tObs, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region', true);
   }
 
-  // re-draw density on top (no legend)
   traces.push({ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
   const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: tObs, x1: tObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
@@ -635,7 +620,7 @@ Difference (mean1 - mean2) = ${diff.toFixed(4)}
 Group1: mean=${m1.toFixed(3)} sd=${s1.toFixed(3)} n=${n1}
 Group2: mean=${m2.toFixed(3)} sd=${s2.toFixed(3)} n=${n2}
   `;
-  plotTTest(t, df, alt, 0.95, 'twoT_plot');
+  plotTTest(t, df, alt, 'twoT_plot');
 }
 
 // ========== PROPORTIONS ==========
@@ -668,7 +653,7 @@ One proportion: p̂ = ${phat.toFixed(4)} (x=${x}, n=${n})
 ${conf*100}% CI: [${ciLow.toFixed(4)}, ${ciHigh.toFixed(4)}]
 Test H₀: p = ${p0}, z = ${zTest.toFixed(4)}, p-value (${alt}) = ${pval.toFixed(6)}
     `;
-    plotZTest(zTest, alt, conf, 'prop_plot');
+    plotZTest(zTest, alt, 'prop_plot');
   } else {
     const x1 = parseFloat(document.getElementById('prop_x1t').value);
     const n1 = parseFloat(document.getElementById('prop_n1t').value);
@@ -692,37 +677,26 @@ Difference (p1 - p2) = ${diff.toFixed(4)}
 ${conf*100}% CI for diff: [${ciLow.toFixed(4)}, ${ciHigh.toFixed(4)}]
 Pooled z-test: z = ${zTest.toFixed(4)}, p-value (${alt}) = ${pval.toFixed(6)}
     `;
-    plotZTest(zTest, alt, conf, 'prop_plot');
+    plotZTest(zTest, alt, 'prop_plot');
   }
 }
-function plotZTest(zObs, alt, conf, plotId) {
-  const alpha = 1 - conf;
+function plotZTest(zObs, alt, plotId) {
   const xMin = -5, xMax = 5, step = 10/300;
   const pdf = normalPDF;
-  const zCritTwo = normalQuantile(1 - alpha/2);
-  const zCritOne = normalQuantile(1 - alpha);
 
   const xVals = [], yVals = [];
   for (let x = xMin; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false }];
 
-  if (alt === 'two-sided') {
-    shadePolygon(traces, xMin, -zCritTwo, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
-    shadePolygon(traces, zCritTwo, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
-  } else if (alt === 'greater') {
-    shadePolygon(traces, zCritOne, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
-  } else {
-    shadePolygon(traces, xMin, -zCritOne, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
-  }
-
+  // p-value region only
   if (alt === 'two-sided') {
     const absZ = Math.abs(zObs);
-    shadePolygon(traces, xMin, -absZ, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
-    shadePolygon(traces, absZ, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
+    shadePolygon(traces, xMin, -absZ, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region', true);
+    shadePolygon(traces, absZ, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region', false);
   } else if (alt === 'greater') {
-    shadePolygon(traces, zObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
+    shadePolygon(traces, zObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region', true);
   } else {
-    shadePolygon(traces, xMin, zObs, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
+    shadePolygon(traces, xMin, zObs, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region', true);
   }
 
   traces.push({ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false });
@@ -870,18 +844,16 @@ function computeChi() {
 }
 
 function plotChiSquare(chi2Obs, df, plotId) {
-  const alpha = 0.05;
   const xMax = Math.max(chi2Obs * 1.5, chi2Quantile(0.995, df) * 1.2, 10);
   const step = xMax / 400;
   const pdf = x => chi2PDF(x, df);
 
   const xVals = [], yVals = [];
   for (let x = 0.01; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false }];
 
-  const crit = chi2Quantile(1 - alpha, df);
-  shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
-  shadePolygon(traces, chi2Obs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
+  // p-value region only
+  shadePolygon(traces, chi2Obs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region', true);
 
   traces.push({ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
@@ -996,18 +968,16 @@ function computeAnova() {
 }
 
 function plotFTest(fObs, df1, df2, plotId) {
-  const alpha = 0.05;
   const xMax = Math.max(fObs * 1.5, fQuantile(0.995, df1, df2) * 1.2, 5);
   const step = xMax / 400;
   const pdf = x => fPDF(x, df1, df2);
 
   const xVals = [], yVals = [];
   for (let x = 0.01; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false }];
 
-  const crit = fQuantile(1 - alpha, df1, df2);
-  shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', 'α region');
-  shadePolygon(traces, fObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region');
+  // p-value region only
+  shadePolygon(traces, fObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', 'p-value region', true);
 
   traces.push({ x: xVals, y: yVals, mode: 'lines', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
