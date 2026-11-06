@@ -565,9 +565,15 @@ function plotTTest(tObs, df, alt, conf, plotId) {
   Plotly.newPlot(plotId, traces, {
     xaxis: {title: 't'}, yaxis: {title: 'density'},
     shapes: shapes,
-    annotations: [{ x: tObs, y: 1.08, yref: 'paper', text: `t = ${tObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    annotations: [{
+      x: tObs, y: 1.0, yref: 'paper',
+      text: `t = ${tObs.toFixed(3)}`,
+      showarrow: false,
+      xanchor: 'left', yanchor: 'bottom', xshift: 6,
+      bgcolor: '#0b2b4a', font: {color: '#fff', size: 11}, borderpad: 3
+    }],
     legend: { orientation: 'h', y: -0.25 },
-    margin: { t: 30 }
+    margin: { t: 30, b: 60 }
   });
 }
 
@@ -722,9 +728,15 @@ function plotZTest(zObs, alt, conf, plotId) {
   Plotly.newPlot(plotId, traces, {
     xaxis: {title: 'z'}, yaxis: {title: 'density'},
     shapes: shapes,
-    annotations: [{ x: zObs, y: 1.08, yref: 'paper', text: `z = ${zObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    annotations: [{
+      x: zObs, y: 1.0, yref: 'paper',
+      text: `z = ${zObs.toFixed(3)}`,
+      showarrow: false,
+      xanchor: 'left', yanchor: 'bottom', xshift: 6,
+      bgcolor: '#0b2b4a', font: {color: '#fff', size: 11}, borderpad: 3
+    }],
     legend: { orientation: 'h', y: -0.25 },
-    margin: { t: 30 }
+    margin: { t: 30, b: 60 }
   });
 }
 
@@ -873,9 +885,15 @@ function plotChiSquare(chi2Obs, df, plotId) {
   Plotly.newPlot(plotId, traces, {
     xaxis: {title: 'χ²'}, yaxis: {title: 'density'},
     shapes: shapes,
-    annotations: [{ x: chi2Obs, y: 1.08, yref: 'paper', text: `χ² = ${chi2Obs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    annotations: [{
+      x: chi2Obs, y: 1.0, yref: 'paper',
+      text: `χ² = ${chi2Obs.toFixed(3)}`,
+      showarrow: false,
+      xanchor: 'left', yanchor: 'bottom', xshift: 6,
+      bgcolor: '#0b2b4a', font: {color: '#fff', size: 11}, borderpad: 3
+    }],
     legend: { orientation: 'h', y: -0.25 },
-    margin: { t: 30 }
+    margin: { t: 30, b: 60 }
   });
 }
 
@@ -992,9 +1010,15 @@ function plotFTest(fObs, df1, df2, plotId) {
   Plotly.newPlot(plotId, traces, {
     xaxis: {title: 'F'}, yaxis: {title: 'density'},
     shapes: shapes,
-    annotations: [{ x: fObs, y: 1.08, yref: 'paper', text: `F = ${fObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    annotations: [{
+      x: fObs, y: 1.0, yref: 'paper',
+      text: `F = ${fObs.toFixed(3)}`,
+      showarrow: false,
+      xanchor: 'left', yanchor: 'bottom', xshift: 6,
+      bgcolor: '#0b2b4a', font: {color: '#fff', size: 11}, borderpad: 3
+    }],
     legend: { orientation: 'h', y: -0.25 },
-    margin: { t: 30 }
+    margin: { t: 30, b: 60 }
   });
 }
 
