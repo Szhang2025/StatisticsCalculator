@@ -534,9 +534,8 @@ function plotTTest(tObs, df, alt, conf, plotId) {
 
   const xVals = [], yVals = [];
   for (let x = xMin; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 't density', line: {color: '#2c7da0', width: 2} }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2} }];
 
-  // α region (red)
   if (alt === 'two-sided') {
     const crit = tQuantile(1 - alpha/2, df);
     shadePolygon(traces, xMin, -crit, pdf, step, 'rgba(220,53,69,0.45)', `α region (|t| > ${crit.toFixed(2)})`);
@@ -549,7 +548,6 @@ function plotTTest(tObs, df, alt, conf, plotId) {
     shadePolygon(traces, xMin, crit, pdf, step, 'rgba(220,53,69,0.45)', `α region (t < ${crit.toFixed(2)})`);
   }
 
-  // p-value region (yellow, on top)
   if (alt === 'two-sided') {
     const absT = Math.abs(tObs);
     shadePolygon(traces, xMin, -absT, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (|t| > ${absT.toFixed(2)})`);
@@ -560,16 +558,16 @@ function plotTTest(tObs, df, alt, conf, plotId) {
     shadePolygon(traces, xMin, tObs, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (t < ${tObs.toFixed(2)})`);
   }
 
-  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 't density', line: {color: '#2c7da0', width: 2}, showlegend: false });
+  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
   const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: tObs, x1: tObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
 
   Plotly.newPlot(plotId, traces, {
-    title: `t (df = ${df}) — red = α region (reject zone), yellow = p-value region (observed tail)`,
-    xaxis: {title: 't value'}, yaxis: {title: 'density'},
+    xaxis: {title: 't'}, yaxis: {title: 'density'},
     shapes: shapes,
-    annotations: [{ x: tObs, y: 1.08, yref: 'paper', text: `observed t = ${tObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
-    legend: { orientation: 'h', y: -0.25 }
+    annotations: [{ x: tObs, y: 1.08, yref: 'paper', text: `t = ${tObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    legend: { orientation: 'h', y: -0.25 },
+    margin: { t: 30 }
   });
 }
 
@@ -696,19 +694,17 @@ function plotZTest(zObs, alt, conf, plotId) {
 
   const xVals = [], yVals = [];
   for (let x = xMin; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'Standard normal', line: {color: '#2c7da0', width: 2} }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2} }];
 
-  // α region (red)
   if (alt === 'two-sided') {
     shadePolygon(traces, xMin, -zCritTwo, pdf, step, 'rgba(220,53,69,0.45)', `α region (|z| > ${zCritTwo.toFixed(2)})`);
     shadePolygon(traces, zCritTwo, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (|z| > ${zCritTwo.toFixed(2)})`);
   } else if (alt === 'greater') {
     shadePolygon(traces, zCritOne, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (z > ${zCritOne.toFixed(2)})`);
   } else {
-    shadePolygon(traces, xMin, -zCritOne, pdf, step, 'rgba(220,53,69,0.45)', `α region (z < ${-zCritOne.toFixed(2)})`);
+    shadePolygon(traces, xMin, -zCritOne, pdf, step, 'rgba(220,53,69,0.45)', `α region (z < ${(-zCritOne).toFixed(2)})`);
   }
 
-  // p-value region (yellow)
   if (alt === 'two-sided') {
     const absZ = Math.abs(zObs);
     shadePolygon(traces, xMin, -absZ, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (|z| > ${absZ.toFixed(2)})`);
@@ -719,16 +715,16 @@ function plotZTest(zObs, alt, conf, plotId) {
     shadePolygon(traces, xMin, zObs, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (z < ${zObs.toFixed(2)})`);
   }
 
-  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'Standard normal', line: {color: '#2c7da0', width: 2}, showlegend: false });
+  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
   const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: zObs, x1: zObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
 
   Plotly.newPlot(plotId, traces, {
-    title: `Standard normal — red = α region (reject zone), yellow = p-value region (observed tail)`,
-    xaxis: {title: 'z value'}, yaxis: {title: 'density'},
+    xaxis: {title: 'z'}, yaxis: {title: 'density'},
     shapes: shapes,
-    annotations: [{ x: zObs, y: 1.08, yref: 'paper', text: `observed z = ${zObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
-    legend: { orientation: 'h', y: -0.25 }
+    annotations: [{ x: zObs, y: 1.08, yref: 'paper', text: `z = ${zObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    legend: { orientation: 'h', y: -0.25 },
+    margin: { t: 30 }
   });
 }
 
@@ -864,22 +860,22 @@ function plotChiSquare(chi2Obs, df, plotId) {
 
   const xVals = [], yVals = [];
   for (let x = 0.01; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'χ² density', line: {color: '#2c7da0', width: 2} }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2} }];
 
   const crit = chi2Quantile(1 - alpha, df);
   shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (χ² > ${crit.toFixed(2)})`);
   shadePolygon(traces, chi2Obs, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (χ² > ${chi2Obs.toFixed(2)})`);
 
-  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'χ² density', line: {color: '#2c7da0', width: 2}, showlegend: false });
+  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
   const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: chi2Obs, x1: chi2Obs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
 
   Plotly.newPlot(plotId, traces, {
-    title: `χ² (df = ${df}) — red = α region (reject zone), yellow = p-value region (observed tail)`,
-    xaxis: {title: 'χ² value'}, yaxis: {title: 'density'},
+    xaxis: {title: 'χ²'}, yaxis: {title: 'density'},
     shapes: shapes,
-    annotations: [{ x: chi2Obs, y: 1.08, yref: 'paper', text: `observed χ² = ${chi2Obs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
-    legend: { orientation: 'h', y: -0.25 }
+    annotations: [{ x: chi2Obs, y: 1.08, yref: 'paper', text: `χ² = ${chi2Obs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    legend: { orientation: 'h', y: -0.25 },
+    margin: { t: 30 }
   });
 }
 
@@ -983,22 +979,22 @@ function plotFTest(fObs, df1, df2, plotId) {
 
   const xVals = [], yVals = [];
   for (let x = 0.01; x <= xMax; x += step) { xVals.push(x); yVals.push(pdf(x)); }
-  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'F density', line: {color: '#2c7da0', width: 2} }];
+  const traces = [{ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2} }];
 
   const crit = fQuantile(1 - alpha, df1, df2);
   shadePolygon(traces, crit, xMax, pdf, step, 'rgba(220,53,69,0.45)', `α region (F > ${crit.toFixed(2)})`);
   shadePolygon(traces, fObs, xMax, pdf, step, 'rgba(255,193,7,0.65)', `p-value region (F > ${fObs.toFixed(2)})`);
 
-  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'F density', line: {color: '#2c7da0', width: 2}, showlegend: false });
+  traces.push({ x: xVals, y: yVals, mode: 'lines', name: 'density', line: {color: '#2c7da0', width: 2}, showlegend: false });
 
   const shapes = [{ type: 'line', xref: 'x', yref: 'paper', x0: fObs, x1: fObs, y0: 0, y1: 1, line: {color: '#0b2b4a', width: 3} }];
 
   Plotly.newPlot(plotId, traces, {
-    title: `F (df₁ = ${df1}, df₂ = ${df2}) — red = α region (reject zone), yellow = p-value region (observed tail)`,
-    xaxis: {title: 'F value'}, yaxis: {title: 'density'},
+    xaxis: {title: 'F'}, yaxis: {title: 'density'},
     shapes: shapes,
-    annotations: [{ x: fObs, y: 1.08, yref: 'paper', text: `observed F = ${fObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
-    legend: { orientation: 'h', y: -0.25 }
+    annotations: [{ x: fObs, y: 1.08, yref: 'paper', text: `F = ${fObs.toFixed(3)}`, showarrow: true, arrowhead: 3, ax: 0, ay: -15, bgcolor: '#0b2b4a', font: {color: '#fff', size: 11} }],
+    legend: { orientation: 'h', y: -0.25 },
+    margin: { t: 30 }
   });
 }
 
@@ -1110,7 +1106,7 @@ function computeRegression() {
   if (document.getElementById('reg_plot')) {
     const trace1 = { x: fitted, y: residuals, mode: 'markers', type: 'scatter', marker: { color: '#2c7da0', size: 8 }, name: 'Residuals' };
     const trace2 = { x: [Math.min(...fitted), Math.max(...fitted)], y: [0,0], mode: 'lines', type: 'scatter', line: { color: '#b23b3b', dash: 'dash' }, name: 'Zero line' };
-    Plotly.newPlot('reg_plot', [trace1, trace2], { title: 'Residuals vs Fitted', xaxis: { title: 'Fitted values' }, yaxis: { title: 'Residuals' }, margin: { t: 40 } });
+    Plotly.newPlot('reg_plot', [trace1, trace2], { xaxis: { title: 'Fitted values' }, yaxis: { title: 'Residuals' }, margin: { t: 30 } });
   }
 }
 
