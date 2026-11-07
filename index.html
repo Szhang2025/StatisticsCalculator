@@ -314,7 +314,7 @@
           <button class="secondary" onclick="parseRegCSV()">Load pasted CSV</button>
           <div style="margin-top:16px;">
             <label>Select response (Y)</label>
-            <select id="reg_y"></select>
+            <select id="reg_y" onchange="refreshPredictorList(regColumnNames)"></select>
             <label>Select predictors (X) – hold Ctrl/Cmd for multiple</label>
             <select id="reg_x" multiple size="4"></select>
           </div>
@@ -351,7 +351,6 @@ function lnGamma(z) {
   return -tmp + Math.log(2.5066282746310005 * ser / x);
 }
 
-// Regularized incomplete beta I_x(a,b) via continued fraction (Numerical Recipes betacf)
 function betacf(a, b, x) {
   const MAXIT = 300, EPS = 3e-16, FPMIN = 1e-300;
   const qab = a + b, qap = a + 1, qam = a - 1;
@@ -390,7 +389,6 @@ function betaIncomplete(a, b, x) {
   }
 }
 
-// Regularized lower incomplete gamma P(a,z)
 function gammaP(a, z) {
   if (z < 0) return 0;
   if (z === 0) return 0;
@@ -1032,12 +1030,15 @@ function plotFTest(fObs, df1, df2, plotId) {
 
 // ========== REGRESSION ==========
 let regData = null;
+let regColumnNames = [];
+
 function handleRegCSV(ev) {
   const file = ev.target.files[0];
   if (!file) return;
   Papa.parse(file, { header: true, skipEmptyLines: true, complete: (res) => {
     regData = res.data;
-    populateRegSelectors(Object.keys(regData[0]));
+    regColumnNames = Object.keys(regData[0]);
+    populateRegSelectors(regColumnNames);
     document.getElementById('reg_csv_text').value = Papa.unparse(regData);
   }});
 }
@@ -1046,22 +1047,43 @@ function parseRegCSV() {
   const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
   if (parsed.data.length === 0) return;
   regData = parsed.data;
-  populateRegSelectors(Object.keys(regData[0]));
-  alert('CSV parsed. ' + Object.keys(regData[0]).length + ' columns.');
+  regColumnNames = Object.keys(regData[0]);
+  populateRegSelectors(regColumnNames);
+  alert('CSV parsed. ' + regColumnNames.length + ' columns.');
 }
 function populateRegSelectors(cols) {
   const ySel = document.getElementById('reg_y');
-  const xSel = document.getElementById('reg_x');
-  ySel.innerHTML = ''; xSel.innerHTML = '';
+  const currentY = ySel.value;
+  ySel.innerHTML = '';
   cols.forEach(c => {
     ySel.innerHTML += `<option value="${c}">${c}</option>`;
-    xSel.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+  if (currentY && cols.includes(currentY)) ySel.value = currentY;
+  refreshPredictorList(cols);
+}
+function refreshPredictorList(allCols) {
+  const ySel = document.getElementById('reg_y');
+  const xSel = document.getElementById('reg_x');
+  const yVal = ySel.value;
+  const previouslySelected = Array.from(xSel.selectedOptions).map(o => o.value);
+  xSel.innerHTML = '';
+  allCols.forEach(c => {
+    if (c === yVal) return;
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    if (previouslySelected.includes(c)) opt.selected = true;
+    xSel.appendChild(opt);
   });
 }
 function computeRegression() {
   if (!regData || regData.length === 0) { document.getElementById('reg_result').innerHTML = '<span class="error">No data loaded.</span>'; return; }
   const yCol = document.getElementById('reg_y').value;
   const xCols = Array.from(document.getElementById('reg_x').selectedOptions).map(o => o.value);
+  if (xCols.includes(yCol)) {
+    document.getElementById('reg_result').innerHTML = '<span class="error">Response variable cannot also be a predictor.</span>';
+    return;
+  }
   if (xCols.length === 0) { document.getElementById('reg_result').innerHTML = '<span class="error">Select at least one predictor.</span>'; return; }
   const data = regData.map(row => ({ y: parseFloat(row[yCol]), x: xCols.map(c => parseFloat(row[c])) })).filter(r => !isNaN(r.y) && r.x.every(v => !isNaN(v)));
   if (data.length < xCols.length + 2) { document.getElementById('reg_result').innerHTML = '<span class="error">Not enough complete rows.</span>'; return; }
@@ -1162,7 +1184,8 @@ setTimeout(() => {
     const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
     if (parsed.data.length > 0) {
       regData = parsed.data;
-      populateRegSelectors(Object.keys(regData[0]));
+      regColumnNames = Object.keys(regData[0]);
+      populateRegSelectors(regColumnNames);
     }
   }
 }, 100);
